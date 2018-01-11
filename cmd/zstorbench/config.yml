@@ -1,0 +1,25 @@
+scenarios:
+  write: # name of the first scenario
+    zstor_config: # zstor config
+      data_shards:
+        - 127.0.0.1:12345
+        - 127.0.0.1:12346
+        - 127.0.0.1:12347
+        - 127.0.0.1:12348
+      meta_shards:
+        - 127.0.0.1:2379
+      block_size: 4096
+      replication_nr: 0
+      replication_max_size: 0
+      distribution_data: 0
+      distribution_parity: 0
+      compress: false
+      encrypt: false
+      encrypt_key: ""
+    bench_conf:                    # config for benchmarking
+      method: write                # name of a benchmarking method
+      result_output: per_second    # time interval of data collection
+      duration: 30                 # duration of the benchmarking in seconds
+      operations: 0                # number of operations
+      key_size: 48                 # key size in bytes
+      ValueSize: 4096              # value size in bytes

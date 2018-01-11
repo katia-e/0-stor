@@ -1,0 +1,39 @@
+benchmarks:
+- prime_parameter:
+    id: value_size
+    range: 128, 256, 512, 1024, 2048, 4096
+  second_parameter:
+    id: key_size
+    range: 24, 48, 96    
+- prime_parameter:
+   id: value_size
+   range: 128, 256, 512, 1024, 2048
+  second_parameter:
+    id: clients
+    range: 1, 2, 3
+template:
+  zstor_config:
+    datastor:
+      data_start_port: 1200
+      pipeline:
+        block_size: 2048 
+        compression:
+          mode: default
+        distribution:
+          data_shards: 2
+          parity_shards: 1
+    metastor:
+      db:
+        meta_shards_nr: 2
+        meta_start_port: 1300
+      encryption:
+        private_key: ab345678901234567890123456789012
+  bench_config:
+    clients: 1
+    method: write
+    result_output: per_second
+    operations: 0
+    duration: 3
+    key_size: 48
+    value_size: 128
+profile: cpu
