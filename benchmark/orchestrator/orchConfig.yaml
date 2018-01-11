@@ -1,4 +1,5 @@
-benchmarks:
+# benchmark orchestrator config for 1.1.0-beta-2
+benchmarks: # list of benchmark scenarios
 - prime_parameter:
     id: value_size
     range: 128, 256, 512, 1024, 2048, 4096
@@ -6,34 +7,33 @@ benchmarks:
     id: key_size
     range: 24, 48, 96    
 - prime_parameter:
-   id: value_size
-   range: 128, 256, 512, 1024, 2048
+    id: data_shards
+    range: 1,2,5,10,20
   second_parameter:
     id: clients
     range: 1, 2, 3
-template:
-  zstor_config:
+template:         # config for benchmark client
+  zstor_config:   
     datastor:
-      data_start_port: 1200
-      pipeline:
-        block_size: 2048 
-        compression:
-          mode: default
-        distribution:
-          data_shards: 2
-          parity_shards: 1
+      data_start_port: 1200   # starting port for data shards
+    pipeline:
+      block_size: 2048 
+      compression:
+        mode: default
+      distribution:
+        data_shards: 2
+        parity_shards: 1
     metastor:
-      db:
-        meta_shards_nr: 2
-        meta_start_port: 1300
-      encryption:
+      meta_shards_nr: 2
+      meta_start_port: 1300
+      encryption:               # enabled when private_key is not empty
         private_key: ab345678901234567890123456789012
   bench_config:
-    clients: 1
-    method: write
+    clients: 1      # number of concurrent clients
+    method: write   # other options: read
     result_output: per_second
-    operations: 0
-    duration: 3
+    operations: 0   
+    duration: 10
     key_size: 48
     value_size: 128
 profile: cpu

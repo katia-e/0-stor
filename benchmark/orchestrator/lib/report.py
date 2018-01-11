@@ -31,7 +31,9 @@ FilterKeys={'organization',
             'iyo',  
             'shards', 
             'db', 
-            'hashing'}
+            'hashing',
+            'datastor',
+            'metastor'}
 
 class Aggregator:
     """

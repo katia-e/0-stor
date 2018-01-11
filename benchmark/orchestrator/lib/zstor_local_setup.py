@@ -122,7 +122,7 @@ class SetupZstor:
                     "--initial-cluster", init_cluster,
                     "--data-dir", db_dir,
                     ]
-
+        
             self.etcd_nodes.append(subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE))
 
     # stop etcd servers

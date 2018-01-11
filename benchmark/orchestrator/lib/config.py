@@ -21,7 +21,8 @@ Parameters = {'block_size',
                 'method',
                 'block_size',
                 'data_shards',
-                'parity_shards'}
+                'parity_shards',
+                'meta_shards_nr'}
 
 Profiles = { 'cpu', 'mem', 'trace', 'block'}
 
@@ -139,18 +140,19 @@ class Config:
     def update_deployment_config(self):
         """ 
         Fetch current zstor server deployment config
+                ***specific for beta2***
         """
 
         try:
             self.datastor =  self.template['zstor_config']['datastor']
-            distribution = self.datastor['pipeline']['distribution']
+            distribution = self.template['zstor_config']['pipeline']['distribution']
             self.data_shards_nr=distribution['data_shards'] + distribution['parity_shards']
         except:
             print("orchestrator config: distribution config is not given correctly")
             raise
         
         try:
-            self.metastor  = self.template['zstor_config']['metastor']['db']
+            self.metastor  = self.template['zstor_config']['metastor']
             self.meta_shards_nr = self.metastor['meta_shards_nr']
         except:
             print("orchestrator config: number of metastor servers is not given")
@@ -158,14 +160,14 @@ class Config:
 
         self.data_start_port = self.get_port(self.datastor.pop('data_start_port', Default_data_start_port))
         self.meta_start_port = self.get_port(self.metastor.pop('meta_start_port', Default_meta_start_port))
-
+        
     def deploy_zstor(self):
         self.deploy.run_zstordb_servers(servers=self.data_shards_nr,
                                     start_port=self.data_start_port,)
         self.deploy.run_etcd_servers(servers=self.meta_shards_nr,
                                     start_port=self.meta_start_port)
         self.datastor.update({'shards': self.deploy.data_shards})
-        self.metastor.update({'endpoints': self.deploy.meta_shards})                                      
+        self.metastor.update({'shards': self.deploy.meta_shards})                                      
 
     def stop_zstor(self):
         self.deploy.stop_etcd_servers()
@@ -213,8 +215,7 @@ class Config:
                 if responce:
                     servers+=1
                 if time.time() > timeout:
-                    print("timeout error: couldn't run all required servers")
-                    break   
+                    sys.exit("timeout error: couldn't run all required servers. Check that ports are free")
         
 class Benchmark():
     """ 

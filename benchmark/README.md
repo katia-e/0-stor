@@ -44,6 +44,7 @@ The `range` field specifies the different values for that zstor config field bei
 
 Here is an example of the config file:
 ``` yaml
+# benchmark orchestrator config for 1.1.0-beta-2
 benchmarks:
 - prime_parameter:
     id: value_size
@@ -61,17 +62,16 @@ template:
   zstor_config:
     datastor:
       data_start_port: 1200
-      pipeline:
-        block_size: 2048 
-        compression:
-          mode: default
-        distribution:
-          data_shards: 2
-          parity_shards: 1
+    pipeline:
+      block_size: 2048 
+      compression:
+        mode: default
+      distribution:
+        data_shards: 2
+        parity_shards: 1
     metastor:
-      db:
-        meta_shards_nr: 2
-        meta_start_port: 1300
+      meta_shards_nr: 2
+      meta_start_port: 1300
       encryption:
         private_key: ab345678901234567890123456789012
   bench_config:
@@ -84,15 +84,14 @@ template:
     value_size: 128
 profile: cpu
 ```
-Port of the local host given in `data shards` is used by the orchestrator as a starting port for zstor servers deployment. Each next server uses the port +1.
-Number of servers deployed is `distribution_data`+`distribution_parity`.
 
-Port of the local host given in `meta shards` is used by the orchestrator as a starting port for etcd servers deployment. Each next server uses the port +1.
+Ports for `zstordb` and `etcd` servers are chosen in incremental order. Starting ports can be set in the config with `data_start_port` and `meta_start_port` correspondingly. Default ports are `data_start_port=1200`, `meta_start_port=1300`. It is assumed that the ports are free before the benchmarking.
 
- 
+Number of `zstordb` servers is defined by `distribution_data`+`distribution_parity`, number of `etcd` servers is defined by `meta_shards_nr` 
+
 ### Benchmark client
 
-`Benchmark client` is written in `go` and contains ligic to collect benchmark information while creating load at the `zstor` server. Client config includes both `zstor` config and parameters of the benchmark. `Benchmark client` is called from `benchmark orchestrator`.
+`Benchmark client` collects benchmark information while writing to or reading from `zstor` servers. The client config includes both `zstor` config and parameters of the benchmark. `Benchmark client` is called from `benchmark orchestrator`.
 
 To use `zstore benchmark` independently run
 ``` bash
