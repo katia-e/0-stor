@@ -11,7 +11,6 @@ BUILD_DATE = $(shell date +%FT%T%z)
 
 SERVER_PACKAGES = $(shell go list ./server/...)
 CLIENT_PACKAGES = $(shell go list ./client/...)
-DAEMON_PACKAGES = $(shell go list ./daemon/...)
 CMD_PACKAGES = $(shell go list ./cmd/...)
 BENCH_PACKAGES = $(shell go list ./benchmark/...)
 
@@ -52,21 +51,18 @@ install: all
 	cp $(OUTPUT)/zstordb $(GOPATH)/bin/zstordb
 	cp $(OUTPUT)/zstorbench $(GOPATH)/bin/zstorbench
 
-test: testserver testclient testdaemon testbench testcmd
+test: testserver testclient testbench testcmd
 
 testcov:
 	utils/scripts/coverage_test.sh
 
-testrace: testserverrace testclientrace testdaemonrace testbenchrace
+testrace: testserverrace testclientrace testbenchrace
 
 testserver:
 	go test -v -timeout $(TIMEOUT) $(SERVER_PACKAGES)
 
 testclient:
 	go test -v -timeout $(TIMEOUT) $(CLIENT_PACKAGES)
-
-testdaemon:
-	go test -v -timeout $(TIMEOUT) $(DAEMON_PACKAGES)
 
 testcmd:
 	go test -v -timeout $(TIMEOUT) $(CMD_PACKAGES)
@@ -79,9 +75,6 @@ testserverrace:
 
 testclientrace:
 	go test -race -timeout $(RACE_TIMEOUT) $(CLIENT_PACKAGES)
-
-testdaemonrace:
-	go test -v -race $(DAEMON_PACKAGES)
 
 testbenchrace:
 	go test -v -race $(BENCH_PACKAGES)
@@ -114,4 +107,4 @@ prune_deps:
 $(OUTPUT):
 	mkdir -p $(OUTPUT)
 
-.PHONY: $(OUTPUT) client server install test testcov testrace testserver testclient testdaemon testbench testcmd testserverrace testclientrace testdaemonrace testracebench testcodegen ensure_deps add_dep update_dep update_deps prune_deps
+.PHONY: $(OUTPUT) client server install test testcov testrace testserver testclient testbench testcmd testserverrace testclientrace testracebench testcodegen ensure_deps add_dep update_dep update_deps prune_deps

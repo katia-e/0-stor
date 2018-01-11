@@ -13,8 +13,8 @@ import (
 	"github.com/coreos/pkg/capnslog"
 	"github.com/stretchr/testify/require"
 	"github.com/zero-os/0-stor/client"
-	"github.com/zero-os/0-stor/client/datastor/pipeline"
-	"github.com/zero-os/0-stor/client/processing"
+	"github.com/zero-os/0-stor/client/pipeline"
+	"github.com/zero-os/0-stor/client/pipeline/processing"
 	"github.com/zero-os/0-stor/server/api"
 	"github.com/zero-os/0-stor/server/api/grpc"
 	"github.com/zero-os/0-stor/server/db/badger"
@@ -150,23 +150,21 @@ func newDefaultZstorConfig(dataShards []string, metaShards []string, blockSize i
 		Namespace: "namespace1",
 		DataStor: client.DataStorConfig{
 			Shards: dataShards,
-			Pipeline: pipeline.Config{
-				BlockSize: blockSize,
-				Compression: pipeline.CompressionConfig{
-					Mode: processing.CompressionModeDefault,
-				},
-				Encryption: pipeline.EncryptionConfig{
-					PrivateKey: "cF0BFpIsljOS8UmaP8YRHRX0nBPVRVPw",
-				},
-				Distribution: pipeline.ObjectDistributionConfig{
-					DataShardCount:   3,
-					ParityShardCount: 1,
-				},
-			},
 		},
 		MetaStor: client.MetaStorConfig{
-			Database: client.MetaStorETCDConfig{
-				Endpoints: metaShards,
+			Shards: metaShards,
+		},
+		Pipeline: pipeline.Config{
+			BlockSize: blockSize,
+			Compression: pipeline.CompressionConfig{
+				Mode: processing.CompressionModeDefault,
+			},
+			Encryption: pipeline.EncryptionConfig{
+				PrivateKey: "cF0BFpIsljOS8UmaP8YRHRX0nBPVRVPw",
+			},
+			Distribution: pipeline.ObjectDistributionConfig{
+				DataShardCount:   3,
+				ParityShardCount: 1,
 			},
 		},
 	}
