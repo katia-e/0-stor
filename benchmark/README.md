@@ -13,18 +13,17 @@ Here are the options of the orchestrator:
 ``` bash
 optional arguments:
   -h, --help            help for orchestrator
-  -C  --conf string     path to the config file (default bench_config.yaml)
-  --out string          directory where the benchmark report will be
+  -C,  --conf string     path to the config file (default bench_config.yaml)
+  --out, string          directory where the benchmark report will be
                         written (default ./report)
 ```
 
 ## Benchmark orchestrator
   
 To collect data for an informative benchmark report we need to repeatedly run `zstor` servers and [`benchmark client`](../cmd/zstorbench/README.md) under multiple benchmarking scenarios and collect performance measures. Benchmark scenarios include parameters for `zstor` server and `zstor` client united in the orchestrator config.
-  
 
 ### Orchestrator config file
-Config file for the `orchestrator` consists of two parts:
+Config file for the `benchmark orchestrator` consists of two parts:
 
   * `template` represents the template of the config file for the [`benchmark client`](../cmd/zstorbench/README.md).
 
@@ -84,23 +83,5 @@ Here is example of the output figures:
 
 `result_output` defines time interval to collect intermetiate data throughout the benchmark and takes values `per_second`, `per_minute` or `per_hour`. Correspondingly, number of performed reads/writes can be sampled each second, minute of hour and stored in `per_interval`. These samples are used to create timeplots during the benchmark. The timeplots by default are collected in `timeplots.md` If `result_output` is empty of invalid, timeplots are not included.
 
-Number of `zstordb` servers is defined by `distribution_data`+`distribution_parity`, number of `etcd` servers is defined by `meta_shards_nr` 
+Number of `zstordb` servers is defined by `distribution_data`+`distribution_parity`, number of `etcd` servers is defined by `meta_shards_nr`.
 
-### Benchmark client
-
-`Benchmark client` collects benchmark information while writing to or reading from `zstor` servers. The client config includes both `zstor` config and parameters of the benchmark. `Benchmark client` is called from `benchmark orchestrator`.
-
-To use `zstor benchmark` independently run
-``` bash
-zstorbench -C config.yaml --out-benchmark benchmark.yaml
-```
-`zstorbench` has the following options:
-``` bash
-  -C, --conf string            path to a config file (default "config.yaml")
-  -h, --help                   help for performance
-      --out-benchmark string   path and filename where benchmarking results are written (default "benchmark.yaml")
-      --out-profile string     path where profiling files are written (default "profile")
-      --profile-mode string    enable profiling mode, one of [cpu, mem, trace, block]
-```
-
-Example of the config file is [here](https://github.com/zero-os/0-stor/blob/benchmark_orchestrator/benchmark/config/testconfigs/validConf.yaml).
