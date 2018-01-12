@@ -3,12 +3,18 @@ import shutil
 import subprocess
 import tempfile
 from random import randint
-
+import socket
 
 # SetupZstor is responsible for managing a zstor setup
 
 Base = '127.0.0.1' # base of addresses at the local host
 
+def pick_free_port():
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(('localhost', 0))
+    addr, port = s.getsockname()
+    s.close()
+    return port
 class SetupZstor:
 
     def __init__(self, ):
@@ -19,7 +25,7 @@ class SetupZstor:
         self.meta_shards = []
 
     # start zstordb servers
-    def run_zstordb_servers(self, servers=2, no_auth=True, jobs=0, start_port=1200, profile=None, profile_dir="profile", data_dir=None, meta_dir=None):
+    def run_zstordb_servers(self, servers=2, no_auth=True, jobs=0, profile=None, profile_dir="profile", data_dir=None, meta_dir=None):
         for i in range(0, servers):
             if not data_dir:
                 db_dir = tempfile.mkdtemp()
@@ -35,7 +41,7 @@ class SetupZstor:
 
             self.cleanup_dirs.extend((db_dir, md_dir))
 
-            port = str(start_port + i)
+            port = str(pick_free_port())
             self.data_shards.append('%s:%s'%(Base,port))
 
             args = ["zstordb",
@@ -78,7 +84,7 @@ class SetupZstor:
     # start etcd servers
     # with client port start__port + server number
     # with peer port start__port + server number + 100
-    def run_etcd_servers(self, servers=2, start_port=1300,  data_dir=""):
+    def run_etcd_servers(self, servers=2, data_dir=""):
         cluster_token = "etcd-cluster-" + str(randint(0, 99))
         names = []
         peer_addresses = []
@@ -88,11 +94,11 @@ class SetupZstor:
 
         for i in range(0, servers):
             name = "node" + str(i)
-            port = str(start_port + i)
+            port = str(pick_free_port())
             self.meta_shards.append('%s:%s'%(Base,port))
 
             client_port = base + port
-            peer_port = base + str(start_port + 100 + i)
+            peer_port = base + str(pick_free_port())
             init_cluster += name + "=" + peer_port + ","
 
             names.append(name)

@@ -29,8 +29,6 @@ Parameters = {'block_size',
 
 Profiles = { 'cpu', 'mem', 'trace', 'block'}
 
-Default_data_start_port = '1200'
-Default_meta_start_port = '1300'
 class Config:
     """
     Class Config includes functions to set up environment for the benchmarking:
@@ -157,15 +155,11 @@ class Config:
             self.meta_shards_nr = self.metastor['meta_shards_nr']
         except:
             raise InvalidBenchmarkConfig("number of metastor servers is not given")
-
-        self.data_start_port = self.get_port(self.datastor.pop('data_start_port', Default_data_start_port))
-        self.meta_start_port = self.get_port(self.metastor.pop('meta_start_port', Default_meta_start_port))
         
     def deploy_zstor(self):
-        self.deploy.run_zstordb_servers(servers=self.data_shards_nr,
-                                    start_port=self.data_start_port,)
-        self.deploy.run_etcd_servers(servers=self.meta_shards_nr,
-                                    start_port=self.meta_start_port)
+        self.deploy.run_zstordb_servers(servers=self.data_shards_nr)
+        self.deploy.run_etcd_servers(servers=self.meta_shards_nr)
+
         self.datastor.update({'shards': self.deploy.data_shards})
         self.metastor.update({'shards': self.deploy.meta_shards})                                      
 
@@ -174,28 +168,6 @@ class Config:
         self.deploy.stop_zstordb_servers()
         self.deploy.cleanup()
 
-    @staticmethod
-    def get_port(addr=None):
-        if not addr:
-            return
-        try:
-            return port2int(addr)
-        except:
-            return port2int(split(':', addr)[-1])        
-
-    @staticmethod
-    def fix_port_list(start_port, servers):
-        """ 
-        Correct list of addresses for the local server deployment.
-        
-        From the given port +1 for each next port.
-        """
-        host = "127.0.0.1"
-      
-        new_addrs=[]
-        for port in range(start_port, start_port+servers):
-            new_addrs.append("%s:%s"%(host,port))
-        return new_addrs
 
     def wait_local_servers_to_start(self):
         """ 

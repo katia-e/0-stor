@@ -104,7 +104,6 @@ def main(argv):
                     except:
                         config.stop_zstor()
                         raise
-                    import ipdb; ipdb.set_trace()
                     # aggregate results
                     report.aggregate(result_benchmark_file)
 
