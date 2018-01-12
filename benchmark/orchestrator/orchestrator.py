@@ -12,8 +12,14 @@ from lib import Config
 from lib import Report
 from lib.bench_client import Bench_client
 import time
+import signal
+
+def handler(signum, frame):
+    raise KeyboardInterrupt
 
 def main(argv):    
+    signal.signal(signal.SIGTSTP, handler)
+
     parser = ArgumentParser(epilog="""
         Orchestrator controls the benchmarking process,
         aggregating results and producing report.
@@ -22,8 +28,8 @@ def main(argv):
                     help='help for orchestrator')    
     parser.add_argument('-C','--conf', 
                         metavar='string',
-                        default='orchConfig.yaml',
-                        help='path to the config file (default orchConfig.yaml)')
+                        default='bench_config.yaml',
+                        help='path to the config file (default bench_config.yaml)')
     parser.add_argument('--out', 
                         metavar='string',
                         default='report',
@@ -34,9 +40,9 @@ def main(argv):
     report_directory = args.out
    
     # path where config for scenarios is written
-    output_config = "scenariosConf.yaml"
+    output_config = "scenarios_config.yaml"
     # path to the benchmark results
-    result_benchmark_file = "benchmarkResult.yaml"          
+    result_benchmark_file = "benchmark_result.yaml"          
 
     print('********************')
     print('****Benchmarking****')
@@ -78,10 +84,10 @@ def main(argv):
                     # update deployment config 
                     config.update_deployment_config()
 
-                    # deploy zstor
-                    config.deploy_zstor()
-
                     try:
+                        # deploy zstor
+                        config.deploy_zstor()   
+
                         # update config file
                         config.save(output_config)
 
@@ -95,10 +101,10 @@ def main(argv):
                                         profile_dir=config.new_profile_dir(report_directory))                    
                         # stop zstor
                         config.stop_zstor()
-                    except KeyboardInterrupt:
+                    except:
                         config.stop_zstor()
                         raise
-
+                    import ipdb; ipdb.set_trace()
                     # aggregate results
                     report.aggregate(result_benchmark_file)
 
@@ -108,7 +114,7 @@ def main(argv):
             # add results of the benchmarking to the report
             report.add_aggregation()
             config.restore_template()
-    except StopIteration:           # Note 4
+    except StopIteration:           
         print("Benchmarking is done")
 
 if __name__ == '__main__':

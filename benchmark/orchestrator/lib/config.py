@@ -12,6 +12,9 @@ from lib.zstor_local_setup import SetupZstor
 from subprocess import run
 from subprocess import check_output
 
+class InvalidBenchmarkConfig(Exception):
+    pass
+
 # list of supported benchmark parameters
 Parameters = {'block_size', 
                 'key_size', 
@@ -44,14 +47,14 @@ class Config:
             try:
                 config = yaml.load(stream)
             except yaml.YAMLError as exc:
-                sys.exit(exc)
+                raise exc
 
         # fetch template config for benchmarking
         self._template0 = config.pop('template', None)
         self.restore_template()        
 
         if not self.template:
-            sys.exit('no template config given')
+            raise InvalidBenchmarkConfig('no zstor config given')
 
         # extract benchmarking parameters
         self.benchmark = iter(self.benchmark_generator(config.pop('benchmarks', None)))
@@ -60,7 +63,7 @@ class Config:
         self.profile = config.pop('profile', None)
 
         if self.profile and (self.profile not in Profiles):
-            sys.exit("orchestrator config: profile mode '%s' is not supported"%self.profile)
+            raise InvalidBenchmarkConfig("profile mode '%s' is not supported"%self.profile)
         
         self.count_profile = 0
 
@@ -105,7 +108,6 @@ class Config:
         def replace(d, id, val):
             for key in list(d.keys()):
                 v = d[key]
-                #import ipdb; ipdb.set_trace()
                 if isinstance(v, dict):
                     if replace(v, id, val):
                         return True
@@ -114,12 +116,12 @@ class Config:
                         parameter_type = type(d[key])
                         try:
                             d[key] = parameter_type(val)
-                        except ValueError:
-                            sys.exit("orchestrator config: cannot convert val = {} to type {}".format(val,parameter_type))
+                        except:
+                            raise InvalidBenchmarkConfig("for '{}' cannot convert val = {} to type {}".format(key,val,parameter_type))
                         return True
             return False
         if not replace(self.template, id, val):
-            sys.exit("orchestrator config: parameter %s is not supported"%id)
+            raise InvalidBenchmarkConfig("parameter %s is not supported"%id)
 
     def restore_template(self):
         self.template = deepcopy(self._template0)
@@ -148,15 +150,13 @@ class Config:
             distribution = self.template['zstor_config']['pipeline']['distribution']
             self.data_shards_nr=distribution['data_shards'] + distribution['parity_shards']
         except:
-            print("orchestrator config: distribution config is not given correctly")
-            raise
+            raise InvalidBenchmarkConfig("distribution config is not correct")
         
         try:
             self.metastor  = self.template['zstor_config']['metastor']
             self.meta_shards_nr = self.metastor['meta_shards_nr']
         except:
-            print("orchestrator config: number of metastor servers is not given")
-            raise
+            raise InvalidBenchmarkConfig("number of metastor servers is not given")
 
         self.data_start_port = self.get_port(self.datastor.pop('data_start_port', Default_data_start_port))
         self.meta_start_port = self.get_port(self.metastor.pop('meta_start_port', Default_meta_start_port))
@@ -215,7 +215,7 @@ class Config:
                 if responce:
                     servers+=1
                 if time.time() > timeout:
-                    sys.exit("timeout error: couldn't run all required servers. Check that ports are free")
+                    raise TimeoutError("couldn't run all required servers. Check that ports are free")
         
 class Benchmark():
     """ 
@@ -226,18 +226,17 @@ class Benchmark():
             try:
                 self.id = parameter['id']              
             except:
-                print("parameter", parameter)
-                sys.exit("invalid benchmark: parameter id field is missing")
+                raise InvalidBenchmarkConfig("parameter id is missing")
             if not self.id:
-                sys.exit("Invalid benchmark: parameter id is empty")             
+                raise InvalidBenchmarkConfig("parameter id is empty")             
             if self.id not in Parameters:
-                sys.exit("invalid benchmark: {0} is not supported".format(self.id))
+                raise InvalidBenchmarkConfig("parameter {0} is not supported".format(self.id))
             try:
                 self.range = split("\W+", parameter['range'])
             except:
-                sys.exit("invalid benchmark: parameter range field is missing")
+                raise InvalidBenchmarkConfig("parameter range is missing")
             if not range:
-                sys.exit("invalid benchmark: no range is given for {0}".format(self.id))
+                raise InvalidBenchmarkConfig("range is missing {0}".format(self.id))
         else:
             # return empty Benchmark
             self.range = [' ']
@@ -258,11 +257,11 @@ class BenchmarkPair():
             self.prime = Benchmark(bench_pair.pop('prime_parameter', None))
             self.second = Benchmark(bench_pair.pop('second_parameter', None))
 
-            if not self.prime.empty and self.prime.id == self.second.id:
-                sys.exit("error: primary and secondary parameters should be different")
+            if not self.prime.empty() and self.prime.id == self.second.id:
+                raise InvalidBenchmarkConfig("primary and secondary parameters should be different")
             
             if self.prime.empty() and not self.second.empty():
-                sys.exit("error: if secondary parameter is given, primary parameter has to be given")
+                raise InvalidBenchmarkConfig("if secondary parameter is given, primary parameter has to be given")
         else:
             # define empty benchmark
             self.prime = Benchmark()
@@ -271,6 +270,6 @@ class BenchmarkPair():
 def port2int(port):
     try:
         port = int(port)
-    except ValueError:
-        sys.exit("error config: wrong port format")        
+    except:
+        raise ValueError("wrong port format")        
     return port             

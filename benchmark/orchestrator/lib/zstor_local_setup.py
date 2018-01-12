@@ -62,10 +62,9 @@ class SetupZstor:
 
     # stop zstordb servers
     def stop_zstordb_servers(self):
-        self.data_shards = []
         for node in self.zstor_nodes:
             node.terminate()
-            _, err = node.communicate()
+            _, err = node.communicate(timeout=5)
             # apparently resturned code is positive when failed (2 or 255)
             # and -15 when successfully terminated
             if node.returncode > 0:
@@ -74,6 +73,7 @@ class SetupZstor:
                 print()
 
         self.zstor_nodes = []
+        self.data_shards = []        
 
     # start etcd servers
     # with client port start__port + server number
@@ -88,7 +88,6 @@ class SetupZstor:
 
         for i in range(0, servers):
             name = "node" + str(i)
-
             port = str(start_port + i)
             self.meta_shards.append('%s:%s'%(Base,port))
 
@@ -122,24 +121,23 @@ class SetupZstor:
                     "--initial-cluster", init_cluster,
                     "--data-dir", db_dir,
                     ]
-        
             self.etcd_nodes.append(subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE))
 
     # stop etcd servers
     def stop_etcd_servers(self):
-        self.meta_shards = []
         for node in self.etcd_nodes:
             node.terminate()
-            _, err = node.communicate()
+            _, err = node.communicate(timeout=5)
 
             # apparently resturned code is positive when failed (2 or 255)
             # and -15 when successfully terminated
-            if node.returncode > 0:
+            if node.returncode>0:
                 print("etcd server exited with code %d:" % node.returncode)
                 print(err.decode())
                 print()
 
         self.etcd_nodes = []
+        self.meta_shards = []
 
     def cleanup(self):
         while self.cleanup_dirs:

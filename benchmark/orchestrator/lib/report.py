@@ -22,6 +22,9 @@ import matplotlib.pyplot as plt
 import yaml
 import sys
 
+class InvalidBenchmarkResult(Exception):
+    pass
+
 TimeUnits = {'per_second': 1, 
              'per_minute': 60, 
                'per_hour': 3600}
@@ -68,6 +71,8 @@ class Report:
             outfile.write("[Main report in here]({0}) \n\n".format(report)) 
 
         self.reports_added = 0   # keep track of added reports
+
+        self.include_timeplots = True
         self.timeplots_added = 0 # keep track of number of timeplots added 
 
     def init_aggregator(self, benchmark=None):
@@ -81,19 +86,17 @@ class Report:
             try:
                 scenarios = yaml.load(stream)['scenarios']
             except yaml.YAMLError as exc:
-                sys.exit(exc)
+                raise exc
         keys = [k for k in scenarios]
         if len(keys) != 1:
-            sys.exit('result: exactly one scenario is expected in this context')
+            raise InvalidBenchmarkResult('output for exactly one scenario is expected in this context')
           
         self.scenario = scenarios[keys[0]]
 
         err = self.scenario.pop('error', None)
         if err:
-            sys.exit("last benchmark exited with error: %s"%err )
+            raise InvalidBenchmarkResult("benchmark exited with error: %s"%err )
         
-        if len(scenarios) > 1:
-            sys.exit("orchestrator config: expected only one scenario each time" )
         self.filter(self.scenario, FilterKeys)
         
     @staticmethod
@@ -126,23 +129,26 @@ class Report:
     def _get_scenario_results(self):
         scenario = self.scenario.get('scenario')
         if not scenario:
-            sys.exit("results: no scenario config")  
+            raise InvalidBenchmarkResult("scenario config is missing")  
 
         zstor_config = scenario.get('zstor_config')
         if not zstor_config:
-            sys.exit("results: no zstor_config")
+            raise InvalidBenchmarkResult("zstor_config is missing")
         
         bench_config = scenario.get('bench_config')
         if not bench_config:
-            sys.exit("results: no bench_config")  
+            raise InvalidBenchmarkResult("bench_config is missing")  
         
-        result_output = bench_config.get('result_output')
-        if not bench_config:
-            sys.exit("results: interval is not given (result_output)")          
-
         results = self.scenario.get('results')
         if not results:
-            sys.exit("results: no results are provided")
+            raise InvalidBenchmarkResult("results are missing")
+
+        result_output = bench_config.get('result_output')
+
+        if not result_output or (result_output not in TimeUnits):
+            for result in results:
+                result['perinterval']=[]
+
         return scenario, results
         
 
@@ -151,32 +157,24 @@ class Report:
 
         scenario, results = self._get_scenario_results()
 
-        if not results:
-            sys.exit("no results are provided")
-        if not scenario:
-            sys.exit("no scenario config")
-
         for result in results:    
             # get duration of the benchmarking
             try:
                 duration = float(result['duration'])
             except:
-                sys.exit('result:duration is not given, or format is not float')   
-            if duration == 0:
-                sys.exit("result: duration can't be 0")
+                raise InvalidBenchmarkResult('duration format is not valid')   
 
             # number of operations in the benchmarking
             try:
                 count = int(result['count'])
             except:
-                exit('count is not given, or format is not int')   
+                raise InvalidBenchmarkResult('count is not given, or format is not int')   
 
-            # get size of each value
-            #import ipdb; ipdb.set_trace()
+            # get size of each value to calculate the throughput
             try:
                 value_size = int(scenario['bench_config']['value_size'])
             except:
-                exit('orchestrator config: value size is not given, or format is not int')  
+                raise InvalidBenchmarkResult('value size is not given, or format is not int')  
                     
             throughput += count*value_size/duration/len(results)
 
@@ -223,7 +221,7 @@ class Report:
 
         # number of data sets combined in the figure
         if len(self.aggregator.throughput) == 0:
-            sys.exit("no results are included")
+            raise InvalidBenchmarkResult("results are empty")
 
         max_throughput = max(max(self.aggregator.throughput))
 
@@ -344,20 +342,19 @@ class Report:
         file_names = []
 
         scenario, results = self._get_scenario_results()
+        if not self.include_timeplots:
+            return
 
         # time_unit_literal represents the time unit for aggregation of the results
         time_unit_literal = scenario['bench_config']['result_output']
         timeUnit = TimeUnits.get(time_unit_literal)
-        
-        if not timeUnit:
-            sys.exit('results: result_output value is not supported')        
         
         for result in results:
             # duration of the benchmarking
             try:
                 duration = float(result['duration'])
             except:
-                exit('duration format is not valid')        
+                raise InvalidBenchmarkResult('duration format is not valid')
 
             # per_interval represents number of opperations per time unit
             per_interval = result.get('perinterval')
