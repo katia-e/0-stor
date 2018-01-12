@@ -14,8 +14,9 @@ func init() {
 }
 
 const (
-	// defaultOperations is set when BenchConf.Operations was not provided
-	defaultOperations = 1000
+	// defaultKeyCount is used when BenchConf.Operations was not provided/invalid
+	// when setting up the keys for the benchmark
+	defaultKeyCount = 1000
 )
 
 var (

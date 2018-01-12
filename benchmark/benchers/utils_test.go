@@ -9,15 +9,16 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/coreos/etcd/embed"
-	"github.com/coreos/pkg/capnslog"
-	"github.com/stretchr/testify/require"
 	"github.com/zero-os/0-stor/client"
 	"github.com/zero-os/0-stor/client/pipeline"
 	"github.com/zero-os/0-stor/client/pipeline/processing"
 	"github.com/zero-os/0-stor/server/api"
 	"github.com/zero-os/0-stor/server/api/grpc"
 	"github.com/zero-os/0-stor/server/db/badger"
+
+	"github.com/coreos/etcd/embed"
+	"github.com/coreos/pkg/capnslog"
+	"github.com/stretchr/testify/require"
 )
 
 // newEmbeddedMetaServer creates new embedded metadata (etcd) server
@@ -158,9 +159,6 @@ func newDefaultZstorConfig(dataShards []string, metaShards []string, blockSize i
 			BlockSize: blockSize,
 			Compression: pipeline.CompressionConfig{
 				Mode: processing.CompressionModeDefault,
-			},
-			Encryption: pipeline.EncryptionConfig{
-				PrivateKey: "cF0BFpIsljOS8UmaP8YRHRX0nBPVRVPw",
 			},
 			Distribution: pipeline.ObjectDistributionConfig{
 				DataShardCount:   3,

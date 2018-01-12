@@ -5,6 +5,7 @@ import (
 
 	"github.com/zero-os/0-stor/benchmark/benchers"
 	"github.com/zero-os/0-stor/benchmark/config"
+
 	yaml "gopkg.in/yaml.v2"
 )
 

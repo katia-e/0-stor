@@ -4,8 +4,9 @@ import (
 	"math"
 	"testing"
 
-	"github.com/stretchr/testify/require"
 	"github.com/zero-os/0-stor/benchmark/config"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestReadBencherRuns(t *testing.T) {
@@ -65,11 +66,11 @@ func TestReadBencherDuration(t *testing.T) {
 	sc := config.Scenario{
 		ZstorConf: clientConfig,
 		BenchConf: config.BenchmarkConfig{
-			Method:     "read",
-			Operations: 100, // should take more then duration
-			Duration:   duration,
-			KeySize:    5,
-			ValueSize:  25,
+			Method:    "read",
+			Duration:  duration,
+			KeySize:   5,
+			ValueSize: 25,
+			Output:    "per_second",
 		},
 	}
 

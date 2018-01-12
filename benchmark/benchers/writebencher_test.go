@@ -4,8 +4,9 @@ import (
 	"math"
 	"testing"
 
-	"github.com/stretchr/testify/require"
 	"github.com/zero-os/0-stor/benchmark/config"
+
+	"github.com/stretchr/testify/require"
 )
 
 const (

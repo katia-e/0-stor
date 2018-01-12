@@ -12,6 +12,7 @@ import (
 
 	"github.com/zero-os/0-stor/client"
 	"github.com/zero-os/0-stor/client/itsyouonline"
+
 	validator "gopkg.in/validator.v2"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -37,10 +38,17 @@ type ClientConf struct {
 	Scenarios map[string]Scenario `yaml:"scenarios" validate:"nonzero"`
 }
 
-// Validate validates a ClientConf
-func (clientConf *ClientConf) Validate() error {
+// validate validates a ClientConf
+func (clientConf *ClientConf) validate() error {
 	if len(clientConf.Scenarios) == 0 {
 		return errors.New("Client config is empty")
+	}
+
+	for _, sc := range clientConf.Scenarios {
+		err := sc.validate()
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -52,9 +60,9 @@ type Scenario struct {
 	BenchConf BenchmarkConfig `yaml:"bench_config" validate:"nonzero"`
 }
 
-// Validate validates a scenario
-func (sc *Scenario) Validate() error {
-	return sc.BenchConf.Validate()
+// validate validates a scenario
+func (sc *Scenario) validate() error {
+	return sc.BenchConf.validate()
 }
 
 // SetupClientConfig sets up the client.Client for a benchmark.
@@ -90,10 +98,10 @@ type BenchmarkConfig struct {
 	ValueSize  int    `yaml:"value_size" validate:"nonzero"`
 }
 
-// Validate validates a BenchmarkConfig
-func (bc *BenchmarkConfig) Validate() error {
+// validate validates a BenchmarkConfig
+func (bc *BenchmarkConfig) validate() error {
 	if bc.Duration <= 0 && bc.Operations <= 0 {
-		return fmt.Errorf("duration or operations was not provided")
+		return fmt.Errorf("no duration or operations was provided")
 	}
 
 	return validator.Validate(bc)
@@ -114,7 +122,7 @@ func FromReader(r io.Reader) (*ClientConf, error) {
 	}
 
 	// validate
-	if err := clientConf.Validate(); err != nil {
+	if err := clientConf.validate(); err != nil {
 		return nil, err
 	}
 

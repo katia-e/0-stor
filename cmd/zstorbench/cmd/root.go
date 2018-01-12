@@ -5,11 +5,12 @@ import (
 	"os"
 	"sync"
 
+	"github.com/zero-os/0-stor/benchmark/benchers"
+	"github.com/zero-os/0-stor/benchmark/config"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/pkg/profile"
 	"github.com/spf13/cobra"
-	"github.com/zero-os/0-stor/benchmark/benchers"
-	"github.com/zero-os/0-stor/benchmark/config"
 )
 
 //BenchmarkFlags defines flags
