@@ -4,33 +4,36 @@
 """
 
 import sys
+import signal
+import time
 from argparse import ArgumentParser
 from argparse import SUPPRESS
 from yaml import dump
-from subprocess import run
 from lib import Config
 from lib import Report
-from lib.bench_client import Bench_client
-import time
-import signal
+
 
 def handler(signum, frame):
+    """ Handler for all SIGTSTP signals """
     raise KeyboardInterrupt
 
-def main(argv):    
-    signal.signal(signal.SIGTSTP, handler)
+def main(argv):
+    """ main function of the benchmarker """
 
+    # parse arguments
     parser = ArgumentParser(epilog="""
         Orchestrator controls the benchmarking process,
         aggregating results and producing report.
     """, add_help=False)
-    parser.add_argument('-h', '--help', action='help',
-                    help='help for orchestrator')    
-    parser.add_argument('-C','--conf', 
+    parser.add_argument('-h', '--help',
+                        action='help',
+                        help='help for orchestrator')
+    parser.add_argument('-C',
+                        '--conf',
                         metavar='string',
                         default='bench_config.yaml',
                         help='path to the config file (default bench_config.yaml)')
-    parser.add_argument('--out', 
+    parser.add_argument('--out',
                         metavar='string',
                         default='report',
                         help='directory where the benchmark report will be written (default ./report)')
@@ -38,15 +41,18 @@ def main(argv):
     args = parser.parse_args()
     input_config = args.conf
     report_directory = args.out
-   
+
     # path where config for scenarios is written
     output_config = "scenarios_config.yaml"
     # path to the benchmark results
-    result_benchmark_file = "benchmark_result.yaml"          
+    result_benchmark_file = "benchmark_result.yaml"
 
     print('********************')
     print('****Benchmarking****')
     print('********************')
+
+    # Catch SIGTSTP signals
+    signal.signal(signal.SIGTSTP, handler)
 
     # extract config information
     config = Config(input_config)
@@ -54,16 +60,13 @@ def main(argv):
     # initialise report opject
     report = Report(report_directory)
 
-    # initialize benchmarking tool
-    benchmarking = Bench_client()
-
     # loop over all given benchmarks
     try:
         while True:
             # switch to the next benchmark config
             benchmark = next(config.benchmark)
 
-            # define a new data collection        
+            # define a new data collection
             report.init_aggregator(benchmark)
 
             # loop over range of the secondary parameter
@@ -75,30 +78,29 @@ def main(argv):
                     config.alter_template(benchmark.second.id, val_second)
 
                 # loop over the prime parameter
-                for val_prime in benchmark.prime.range:    
+                for val_prime in benchmark.prime.range:
                     # alter the template config if prime parameter is given
                     if not benchmark.prime.empty():
-                        config.alter_template(benchmark.prime.id, val_prime)  
-                    
-                    
-                    # update deployment config 
+                        config.alter_template(benchmark.prime.id, val_prime)
+
+                    # update deployment config
                     config.update_deployment_config()
 
                     try:
                         # deploy zstor
-                        config.deploy_zstor()   
+                        config.deploy_zstor()
 
                         # update config file
                         config.save(output_config)
 
                         # wait for servers to start
-                        config.wait_local_servers_to_start()                                  
+                        config.wait_local_servers_to_start()
 
-                        # perform benchmarking 
-                        benchmarking.run(config=output_config, 
-                                        out=result_benchmark_file,
-                                        profile=config.profile, 
-                                        profile_dir=config.new_profile_dir(report_directory))                    
+                        # perform benchmarking
+                        config.deploy.bench_client(config=output_config,
+                                                    out=result_benchmark_file,
+                                                    profile=config.profile,
+                                                    profile_dir=config.new_profile_dir(report_directory))
                         # stop zstor
                         config.stop_zstor()
                     except:
@@ -109,12 +111,12 @@ def main(argv):
 
                     # add timeplots to the report
                     report.add_timeplot()
-            
+
             # add results of the benchmarking to the report
             report.add_aggregation()
             config.restore_template()
-    except StopIteration:           
+    except StopIteration:
         print("Benchmarking is done")
 
 if __name__ == '__main__':
-    main(sys.argv[1:])    
+    main(sys.argv[1:])

@@ -5,17 +5,10 @@ import tempfile
 from random import randint
 import socket
 
-# SetupZstor is responsible for managing a zstor setup
-
 Base = '127.0.0.1' # base of addresses at the local host
 
-def pick_free_port():
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind(('localhost', 0))
-    addr, port = s.getsockname()
-    s.close()
-    return port
 class SetupZstor:
+    """ SetupZstor is responsible for managing a zstor setup """
 
     def __init__(self, ):
         self.zstor_nodes = []
@@ -24,8 +17,16 @@ class SetupZstor:
         self.data_shards = []
         self.meta_shards = []
 
-    # start zstordb servers
-    def run_zstordb_servers(self, servers=2, no_auth=True, jobs=0, profile=None, profile_dir="profile", data_dir=None, meta_dir=None):
+    def run_zstordb_servers(self,
+                            servers=2,
+                            no_auth=True,
+                            jobs=0,
+                            profile=None,
+                            profile_dir="profile",
+                            data_dir=None,
+                            meta_dir=None):
+        """  Start zstordb servers """
+
         for i in range(0, servers):
             if not data_dir:
                 db_dir = tempfile.mkdtemp()
@@ -71,7 +72,7 @@ class SetupZstor:
         for node in self.zstor_nodes:
             node.terminate()
             _, err = node.communicate(timeout=5)
-            # apparently resturned code is positive when failed (2 or 255)
+            # returned code is positive when failed (2 or 255)
             # and -15 when successfully terminated
             if node.returncode > 0:
                 print("zstor server exited with code %d:" % node.returncode)
@@ -79,12 +80,11 @@ class SetupZstor:
                 print()
 
         self.zstor_nodes = []
-        self.data_shards = []        
+        self.data_shards = []
 
-    # start etcd servers
-    # with client port start__port + server number
-    # with peer port start__port + server number + 100
     def run_etcd_servers(self, servers=2, data_dir=""):
+        """ Start etcd servers on random free ports """
+
         cluster_token = "etcd-cluster-" + str(randint(0, 99))
         names = []
         peer_addresses = []
@@ -95,7 +95,7 @@ class SetupZstor:
         for i in range(0, servers):
             name = "node" + str(i)
             port = str(pick_free_port())
-            self.meta_shards.append('%s:%s'%(Base,port))
+            self.meta_shards.append('%s:%s'%(Base, port))
 
             client_port = base + port
             peer_port = base + str(pick_free_port())
@@ -126,18 +126,21 @@ class SetupZstor:
                     "--initial-cluster-token", cluster_token,
                     "--initial-cluster", init_cluster,
                     "--data-dir", db_dir,
-                    ]
-            self.etcd_nodes.append(subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE))
+                   ]
+            self.etcd_nodes.append(subprocess.Popen(args,
+                                                    stdout=subprocess.PIPE,
+                                                    stderr=subprocess.PIPE))
 
-    # stop etcd servers
     def stop_etcd_servers(self):
+        """ Stop etcd servers """
+
         for node in self.etcd_nodes:
             node.terminate()
             _, err = node.communicate(timeout=5)
 
-            # apparently resturned code is positive when failed (2 or 255)
+            # returned code is positive when failed (2 or 255)
             # and -15 when successfully terminated
-            if node.returncode>0:
+            if node.returncode > 0:
                 print("etcd server exited with code %d:" % node.returncode)
                 print(err.decode())
                 print()
@@ -146,13 +149,42 @@ class SetupZstor:
         self.meta_shards = []
 
     def cleanup(self):
+        """ Delete all directories in cleanup """
         while self.cleanup_dirs:
             shutil.rmtree(self.cleanup_dirs.pop())
 
-# returns true if provided profile flag is valid
+    @staticmethod
+    def bench_client(profile=None,
+                     profile_dir="profile_client",
+                     config="client_config.yaml",
+                     out="bench_result.yaml"):
+        """ Run benchmark client"""
+
+        args = ["zstorbench",
+                "--conf", config,
+                "--out-benchmark",
+                out,
+                ]
+
+        if profile and is_profile_flag(profile):
+            args.extend(("--profile-mode", profile))
+            args.extend(("--out-profile", profile_dir))
+
+        # run benchmark client
+        subprocess.run(args, )
+
 def is_profile_flag(flag):
+    """ return true if provided profile flag is valid """
     return flag in ('cpu', 'mem', 'block', 'trace')
 
+def pick_free_port():
+    """ Pick free port using socket """
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(('localhost', 0))
+    addr, port = s.getsockname()
+    s.close()
+    return port
 
 if __name__ == '__main__':
     z = SetupZstor()
