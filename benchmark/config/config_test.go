@@ -11,9 +11,9 @@ import (
 )
 
 const (
-	validFile              = "testconfigs/validConf.yaml"
-	invalidDurOpsConfFile  = "testconfigs/invalidDurOpsConf.yaml"
-	invalidKeySizeConfFile = "testconfigs/invalidKeySizeConf.yaml"
+	validFile              = "../../fixtures/benchmark/testconfigs/validConf.yaml"
+	invalidDurOpsConfFile  = "../../fixtures/benchmark/testconfigs/invalidDurOpsConf.yaml"
+	invalidKeySizeConfFile = "../../fixtures/benchmark/testconfigs/invalidKeySizeConf.yaml"
 )
 
 func TestClientConfig(t *testing.T) {
