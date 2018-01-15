@@ -142,25 +142,28 @@ class Config:
         Fetch current zstor server deployment config
                 ***specific for beta2***
         """
-
         try:
-            self.datastor =  self.template['zstor_config']['datastor']
-            distribution = self.template['zstor_config']['pipeline']['distribution']
+            self.zstor_config =  self.template['zstor_config']
+            distribution = self.zstor_config['pipeline']['distribution']
             self.data_shards_nr=distribution['data_shards'] + distribution['parity_shards']
         except:
             raise InvalidBenchmarkConfig("distribution config is not correct")
-        
         try:
             self.metastor  = self.template['zstor_config']['metastor']
             self.meta_shards_nr = self.metastor['meta_shards_nr']
         except:
             raise InvalidBenchmarkConfig("number of metastor servers is not given")
         
+        self.no_auth = True
+        IYOtoken = self.template['zstor_config'].get('iyo', None)
+        if IYOtoken:
+            self.no_auth = False
+        
     def deploy_zstor(self):
-        self.deploy.run_zstordb_servers(servers=self.data_shards_nr)
+        self.deploy.run_zstordb_servers(servers=self.data_shards_nr, no_auth=self.no_auth)
         self.deploy.run_etcd_servers(servers=self.meta_shards_nr)
 
-        self.datastor.update({'shards': self.deploy.data_shards})
+        self.zstor_config.update({'datastor':{'shards': self.deploy.data_shards}})
         self.metastor.update({'shards': self.deploy.meta_shards})                                      
 
     def stop_zstor(self):

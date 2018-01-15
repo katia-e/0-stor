@@ -1,18 +1,20 @@
 scenarios:
   bench1:
     zstor_config:
-      namespace: adisk
+      iyo:
+        organization: myorg  # itsyou.online organization name
+        app_id: appID
+        app_secret: secret
+      namespace: namespace1  # itsyou.online namespace
       datastor:
         shards:
-          - 127.0.0.1:45627
-          - 127.0.0.1:49861
-          - 127.0.0.1:37355
+          - 127.0.0.1:12345
+          - 127.0.0.1:12346
+          - 127.0.0.1:12347
       metastor:
-          shards:
-            - 127.0.0.1:51583
-            - 127.0.0.1:48843
-          encryption:
-            private_key: ab345678901234567890123456789012
+        shards:
+          - 127.0.0.1:2379
+          - 127.0.0.1:22379
       pipeline:
         block_size: 4096
         compression:

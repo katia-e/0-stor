@@ -20,17 +20,22 @@ optional arguments:
 
 ## Benchmark orchestrator
   
-To collect data for an informative benchmark report we need to repeatedly run `zstor` servers and [`benchmark client`](../cmd/zstorbench/README.md) under multiple benchmarking scenarios and collect performance measures. Benchmark scenarios include parameters for `zstor` server and `zstor` client united in the orchestrator config.
+To collect data for an informative benchmark report we need to repeatedly run `zstor` servers and [`benchmark client`](../cmd/zstorbench/README.md) under multiple benchmarking scenarios and collect performance measures. Benchmark scenarios represent combinations of parameters for the `zstor` server and client, being important for performance analysis.
 
 ### Orchestrator config file
 Config file for the `benchmark orchestrator` consists of two parts:
 
-  * `template` represents the template of the config file for the [`benchmark client`](../cmd/zstorbench/README.md).
+  * `template` represents the template of the config file for the [`benchmark client`](../cmd/zstorbench/README.md). 
+
+ Number of `zstordb` servers is defined by `distribution_data`+`distribution_parity`, number of `etcd` servers is defined by `meta_shards_nr`.
+
+`iyo` contains token (`organization`, `app_id` and `app_secret`) for authentification via [`itsyou.online`](itsyou.online). If `ioy` is not given, `no-auth` flag is set for `zstor` server and no authentification is performed during the benchmark.
 
   * `benchmarks` contains information to build multiple benchmark scenarios. In case if `benchmarks` is not provided, the benchmark will run for a single set of parameters, provided in `template`.
-  The config for each benchmark is marked by the `prime_parameter` and inside there can be an optional `second_parameter` defined. Inside both `prime_parameter` and `second_parameter` field the `id` specifies what zstor config field is being benchmarked. The `range` field specifies the different values for that zstor config field being used in the benchmarks.
-   This structure allows for setting up the output format for the figures in the output file. 
-If only `prime_parameter` is given, `orchestrator` creates a plot of the system throughput versus values in `range` of the `prime parameter`.
+
+ The config for each benchmark is marked by the `prime_parameter` and inside there can be an optional `second_parameter` defined. Inside both `prime_parameter` and `second_parameter` field the `id` specifies what zstor config field is being benchmarked. The `range` field specifies the different values for that zstor config field being used in the benchmarks. This structure allows for setting up the output format for the figures in the output file. 
+
+ If only `prime_parameter` is given, `orchestrator` creates a plot of the system throughput versus values in `range` of the `prime parameter`.
 If both `prime_parameter` and `second_parameter` are given, a few plots will be combined in the output figure, one for each value in `range` of `second_parameter`.
 
 Here is an example of the config file:
@@ -51,8 +56,11 @@ benchmarks: # list of benchmark scenarios
     range: 1, 2, 3
 template:         # config for benchmark client
   zstor_config:   
-    datastor:
-      data_start_port: 1200   # starting port for data shards
+    namespace: mynamespace # itsyou.online namespace
+    iyo:  # itsyou.online authentification token
+      organization: myorg  # itsyou.online organization name
+      app_id: appID        # itsyou.online Application ID
+      app_secret: secret   # itsyou.online Secret
     pipeline:
       block_size: 2048 
       compression:
@@ -62,9 +70,6 @@ template:         # config for benchmark client
         parity_shards: 1
     metastor:
       meta_shards_nr: 2
-      meta_start_port: 1300
-      encryption:               # enabled when private_key is not empty
-        private_key: ab345678901234567890123456789012
   bench_config:
     clients: 1      # number of concurrent clients
     method: write   # other options: read
@@ -77,11 +82,11 @@ profile: cpu
 # * in the output figures 'prime_parameter.range' is used in the x-axis, while 'second_parameter.range' enables multiplot.
 # ** if both 'operations' and 'duration' are given, interrupts when any of them has reached the limit
 ```
-Here is example of the output figures:  
+`result_output` defines time interval to collect intermetiate data throughout the benchmark and takes values `per_second`, `per_minute` or `per_hour`. These samples are used to create timeplots during the benchmark. The timeplots by default are collected in `timeplots.md` If `result_output` is empty of invalid, timeplots are not included.
+
+Here is example of the output figures:
+
 ![Fig](assets/fig1.png) 
 ![Fig](assets/fig2.png) 
 
-`result_output` defines time interval to collect intermetiate data throughout the benchmark and takes values `per_second`, `per_minute` or `per_hour`. Correspondingly, number of performed reads/writes can be sampled each second, minute of hour and stored in `per_interval`. These samples are used to create timeplots during the benchmark. The timeplots by default are collected in `timeplots.md` If `result_output` is empty of invalid, timeplots are not included.
-
-Number of `zstordb` servers is defined by `distribution_data`+`distribution_parity`, number of `etcd` servers is defined by `meta_shards_nr`.
 

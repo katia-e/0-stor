@@ -43,8 +43,10 @@ zstorbench --out-profile "outputProfileInfo" --profile-mode cpu
 Client config contains a list of scenarios. 
 Each scenario is associated with a corresponding scenarioID and provides two sets of parameters: 
 `zstor_config` and `bench_conf`.
-Structure `zstor_config` are nessesary to create a `zstor client` and can be parsed into a type [client.Policy](https://github.com/zero-os/0-stor/blob/master/client/policy.go) of [zstor client package](https://github.com/zero-os/0-stor/tree/master/client). 
+Structure `zstor_config` are nessesary to create a `zstor client` and can be parsed into a type `client.Policy` of [zstor client package](https://github.com/zero-os/0-stor/tree/master/client). 
 
+`iyo` has to be given in case if `zstor` server is running with flag `--no-auth` and, therefore, require no authentification via `itsyou.online`.
+Note, that invalid `ioy` token lead to an error even if authentification is unset.
 
 Structure `bench_conf` represents such benchmark parameters like duration of the performance test, maximum number of operations, maximum benchmark duration and output format.
 One of two parameters `duration` and `operations` has to be provided. If both are given, the benchmarking program terminates as soon as one of the following events occurs:
@@ -77,9 +79,9 @@ scenarios:
       namespace: adisk
       datastor:
         shards:
-          - 127.0.0.1:1200
-          - 127.0.0.1:1201
-          - 127.0.0.1:1202
+        - 127.0.0.1:45627
+        - 127.0.0.1:49861
+        - 127.0.0.1:37355
       metastor:
           shards: # If empty or omitted, an in memory metadata server will be used
                   # Otherwise it will presume to have etcd servers running on these addresses
@@ -122,11 +124,11 @@ scenarios:
       - 82
     scenario:         # zstor config used for the benchmark
       zstor_config:
-        iyo:
-          organization: ""
-          app_id: ""
-          app_secret: ""
-        namespace: adisk
+      namespace: mynamespace # itsyou.online namespace
+      iyo:  # itsyou.online authentification token
+        organization: myorg  # itsyou.online organization name
+        app_id: appID        # itsyou.online Application ID
+        app_secret: secret   # itsyou.online Secret
         datastor:
           shards:
           - 127.0.0.1:45627

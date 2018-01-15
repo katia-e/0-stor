@@ -14,20 +14,24 @@ benchmarks: # list of benchmark scenarios
     range: 1, 2, 3
 template:         # config for benchmark client
   zstor_config:   
-    datastor:
-      data_start_port: 1200   # starting port for data shards
+    namespace: mynamespace # itsyou.online namespace
+    iyo:  # itsyou.online authentification token
+      organization: myorg  # itsyou.online organization name
+      app_id: appID        # itsyou.online Application ID
+      app_secret: secret   # itsyou.online Secret
     pipeline:
-      block_size: 2048 
+      block_size: 4096
       compression:
-        mode: default
+        type: snappy # snappy is the default, other options: lz4, gzip
+        mode: default # default is the default, other options: best_speed, best_compression
+      encryption:
+        type: aes # aes is the default and only standard option
+        private_key: ab345678901234567890123456789012
       distribution:
-        data_shards: 2
+        data_shards: 3
         parity_shards: 1
     metastor:
       meta_shards_nr: 2
-      meta_start_port: 1300
-      encryption:               # enabled when private_key is not empty
-        private_key: ab345678901234567890123456789012
   bench_config:
     clients: 1      # number of concurrent clients
     method: write   # other options: read
