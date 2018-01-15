@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/zero-os/0-stor/client"
-	"github.com/zero-os/0-stor/client/itsyouonline"
 
 	validator "gopkg.in/validator.v2"
 	yaml "gopkg.in/yaml.v2"
@@ -66,12 +65,8 @@ func (sc *Scenario) validate() error {
 }
 
 // SetupClientConfig sets up the client.Client for a benchmark.
-// Removes IYO fields. (Benchmarks uses no-auth zstordb's)
 // Sets random namespace if empty
 func SetupClientConfig(c *client.Config) {
-	// empty IYO fields
-	c.IYO = itsyouonline.Config{}
-
 	// set namespace if not provided
 	if c.Namespace == "" {
 		c.Namespace = "b-" + randomSuffix(4)

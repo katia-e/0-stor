@@ -59,9 +59,18 @@ func TestSetupClientConfig(t *testing.T) {
 	}
 
 	SetupClientConfig(&c)
-
-	require.Empty(c.IYO.Organization, "IYO organization should be empty")
-	require.Empty(c.IYO.ApplicationID, "IYO app ID should be empty")
-	require.Empty(c.IYO.ApplicationSecret, "IYO app secret should be empty")
 	require.NotEmpty(c.Namespace, "Namespace should be set")
+
+	const testNamespace = "test_namespace"
+	c = client.Config{
+		IYO: itsyouonline.Config{
+			Organization:      "org",
+			ApplicationID:     "some ID",
+			ApplicationSecret: "some secret",
+		},
+		Namespace: testNamespace,
+	}
+
+	SetupClientConfig(&c)
+	require.Equal(testNamespace, c.Namespace)
 }
