@@ -3,6 +3,7 @@ package benchers
 
 import (
 	"math/rand"
+	"strings"
 	"time"
 
 	"github.com/zero-os/0-stor/benchmark/config"
@@ -61,7 +62,7 @@ func (d Duration) MarshalYAML() (interface{}, error) {
 // GetBencherCtor returns a BencherCtor that belongs to the provided method string
 // if benchmarking method was not found, nil is returned
 func GetBencherCtor(benchMethod string) BencherCtor {
-	benchConstructor, ok := benchers[benchMethod]
+	benchConstructor, ok := benchers[strings.ToLower(benchMethod)]
 	if !ok {
 		return nil
 	}

@@ -44,7 +44,7 @@ func NewWriteBencher(scenarioID string, scenario *config.Scenario) (Benchmarker,
 	// initializing client
 	config.SetupClientConfig(&scenario.ZstorConf)
 	var err error
-	wb.client, err = client.NewClientFromConfig(scenario.ZstorConf, 1)
+	wb.client, err = newClientFromConfig(&scenario.ZstorConf, 1, true)
 	if err != nil {
 		log.Errorf("Error creating client: %v", err)
 		return nil, fmt.Errorf("Failed creating client: %v", err)

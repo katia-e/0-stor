@@ -2,8 +2,8 @@
 
 Benchmark client provides tools for benchmarking and profiling zstor client for various scenarios.
 
-Configuration for benchmarking scenarios should be given in YAML format (see [example](#yaml-config-file) of the config file bellow).
-Benchmarking program outputs results for all provided scenarios to a single output file in YAML format (see [example](#yaml-output-file) of the output file bellow). 
+Configuration for benchmarking scenarios should be given in YAML format (see [example](#benchmark-config) of the config file bellow).
+Benchmarking program outputs results for all provided scenarios to a single output file in YAML format (see [example](#output file) of the output file bellow). 
 
 
 ## Getting started
@@ -11,7 +11,7 @@ Install all necessary `zstor` components by running
 ```bash
 make install
 ```
-In order to start benchmarking program all necessary [zstor servers](https://github.com/zero-os/0-stor/blob/master/docs/gettingstarted.md) have to be set up.
+In order to start a benchmarking run, all necessary [zstor servers](https://github.com/zero-os/0-stor/blob/master/docs/gettingstarted.md) have to be set up.
 
 Start the benchmarking
 ``` bash
@@ -55,10 +55,12 @@ One of two parameters `duration` and `operations` has to be provided. If both ar
  + `read` - for reading from zstor
  + `write` - for writing to zstor
 
-`result_output` specifies interval of the data collection and can take values
+`result_output` specifies interval of the data collection (`perinterval` in the results) and can take values:  
  + per_second
  + per_minute
  + per_hour
+
+if empty or invalid, there will be no interval data collection.
 
 The following example of a config file represents a benchmarking scenario `bench1`.
 
@@ -66,6 +68,12 @@ The following example of a config file represents a benchmarking scenario `bench
 scenarios:
   bench1:
     zstor_config:
+      iyo:  # if empty or omitted, the zstordb servers set up for the benchmark 
+            # need to be run with the no-auth flag.
+            # For benching with authentication, provide it with valid itsyou.online credential
+        organization: "bench_org"
+        app_id: "an_iyo_bench_app_id"
+        app_secret: "an_iyo_bench_app_secret"
       namespace: adisk
       datastor:
         shards:
@@ -73,11 +81,10 @@ scenarios:
           - 127.0.0.1:1201
           - 127.0.0.1:1202
       metastor:
-          shards:
+          shards: # If empty or omitted, an in memory metadata server will be used
+                  # Otherwise it will presume to have etcd servers running on these addresses
             - 127.0.0.1:1300
             - 127.0.0.1:1301
-          encryption:
-            private_key: ab345678901234567890123456789012
       pipeline:
         block_size: 4096
         compression:
@@ -89,7 +96,7 @@ scenarios:
           parity_shards: 1
     bench_config:
       method: write
-      result_output: per_second
+      result_output: per_second # if empty or invalid, perinterval in the result will be empty
       duration: 5
       operations: 0
       key_size: 48

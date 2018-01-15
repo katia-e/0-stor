@@ -3,10 +3,8 @@ package benchers
 import (
 	"io/ioutil"
 	"net"
-	"net/url"
 	"os"
 	"path"
-	"path/filepath"
 	"testing"
 
 	"github.com/zero-os/0-stor/client"
@@ -16,82 +14,8 @@ import (
 	"github.com/zero-os/0-stor/server/api/grpc"
 	"github.com/zero-os/0-stor/server/db/badger"
 
-	"github.com/coreos/etcd/embed"
-	"github.com/coreos/pkg/capnslog"
 	"github.com/stretchr/testify/require"
 )
-
-// newEmbeddedMetaServer creates new embedded metadata (etcd) server
-func newEmbeddedMetaServer() (*embeddedMetaServer, error) {
-	tmpDir, err := ioutil.TempDir("", "etcd")
-	if err != nil {
-		return nil, err
-	}
-
-	cfg := embed.NewConfig()
-	cfg.Dir = tmpDir
-
-	capnslog.SetGlobalLogLevel(capnslog.CRITICAL)
-	// listen client URL
-	// we use tmpDir as unix address because it is a simple
-	// yet valid way to generate random string
-	lcurl, err := url.Parse("unix://" + filepath.Base(tmpDir))
-	if err != nil {
-		return nil, err
-	}
-	cfg.LCUrls = []url.URL{*lcurl}
-
-	// listen peer url
-	// same strategy with listen client URL
-	lpDir, err := ioutil.TempDir("", "etcd")
-	if err != nil {
-		return nil, err
-	}
-	lpurl, err := url.Parse("unix://" + filepath.Base(lpDir))
-	if err != nil {
-		return nil, err
-	}
-	cfg.LPUrls = []url.URL{*lpurl}
-
-	e, err := embed.StartEtcd(cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	<-e.Server.ReadyNotify()
-
-	conf := e.Config()
-
-	return &embeddedMetaServer{
-		lpDir:      lpDir,
-		lcDir:      tmpDir,
-		etcd:       e,
-		listenAddr: conf.LCUrls[0].String(),
-	}, nil
-}
-
-// embeddedMetaServer is embedded metadata server
-// which listen on unix socket
-type embeddedMetaServer struct {
-	lcDir      string
-	lpDir      string
-	etcd       *embed.Etcd
-	listenAddr string
-}
-
-// Stop stops the server and release it's resources
-func (s *embeddedMetaServer) Stop() {
-	s.etcd.Server.Stop()
-	<-s.etcd.Server.StopNotify()
-	s.etcd.Close()
-	os.RemoveAll(s.lpDir)
-	os.RemoveAll(s.lcDir)
-}
-
-// ListenAddrs returns listen address of this server
-func (s *embeddedMetaServer) ListenAddr() string {
-	return s.listenAddr
-}
 
 // newTestZstorServers returns n amount of zstor test servers
 // also returns a function to clean up the servers
@@ -146,6 +70,9 @@ func (ts *testZstorServer) Address() string {
 	return ts.addr
 }
 
+// newDefaultZstorConfig returns a default zstor client config used for testing
+// with provided data shards, meta shards and blocksize
+// if meta shards is nil, an in memory meta server will be used (recommended for testing)
 func newDefaultZstorConfig(dataShards []string, metaShards []string, blockSize int) client.Config {
 	return client.Config{
 		Namespace: "namespace1",

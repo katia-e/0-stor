@@ -20,9 +20,6 @@ func TestWriteBencherRuns(t *testing.T) {
 	require := require.New(t)
 
 	// setup test servers
-	meta, err := newEmbeddedMetaServer()
-	require.NoError(err, "fail to start embedded meta server")
-	defer meta.Stop()
 	servers, serverClean := newTestZstorServers(t, 4)
 	defer serverClean()
 
@@ -31,7 +28,7 @@ func TestWriteBencherRuns(t *testing.T) {
 		shards[i] = server.Address()
 	}
 
-	clientConfig := newDefaultZstorConfig(shards, []string{meta.ListenAddr()}, 64)
+	clientConfig := newDefaultZstorConfig(shards, nil, 64)
 
 	const runs = 5
 	sc := config.Scenario{
@@ -58,9 +55,6 @@ func TestWriteBencherDuration(t *testing.T) {
 	require := require.New(t)
 
 	// setup test servers
-	meta, err := newEmbeddedMetaServer()
-	require.NoError(err, "fail to start embedded meta server")
-	defer meta.Stop()
 	servers, serverClean := newTestZstorServers(t, 4)
 	defer serverClean()
 
@@ -69,7 +63,7 @@ func TestWriteBencherDuration(t *testing.T) {
 		shards[i] = server.Address()
 	}
 
-	clientConfig := newDefaultZstorConfig(shards, []string{meta.ListenAddr()}, 64)
+	clientConfig := newDefaultZstorConfig(shards, nil, 64)
 
 	sc := config.Scenario{
 		ZstorConf: clientConfig,
