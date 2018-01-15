@@ -75,11 +75,11 @@ template:         # config for benchmark client
     value_size: 128
 profile: cpu
 # * in the output figures 'prime_parameter.range' is used in the x-axis, while 'second_parameter.range' enables multiplot.
-# ** if both 'operations' and 'duration' are given, interupts when any of them has reached the limit
+# ** if both 'operations' and 'duration' are given, interrupts when any of them has reached the limit
 ```
-Here is example of the output figures:
-![Fig](fig1.png) 
-![Fig](fig2.png) 
+Here is example of the output figures:  
+![Fig](assets/fig1.png) 
+![Fig](assets/fig2.png) 
 
 `result_output` defines time interval to collect intermetiate data throughout the benchmark and takes values `per_second`, `per_minute` or `per_hour`. Correspondingly, number of performed reads/writes can be sampled each second, minute of hour and stored in `per_interval`. These samples are used to create timeplots during the benchmark. The timeplots by default are collected in `timeplots.md` If `result_output` is empty of invalid, timeplots are not included.
 
