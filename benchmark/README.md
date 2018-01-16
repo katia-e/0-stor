@@ -29,7 +29,7 @@ Config file for the `benchmark orchestrator` consists of two parts:
 
  Number of `zstordb` servers is defined by `distribution_data`+`distribution_parity`, number of `etcd` servers is defined by `meta_shards_nr`.
 
-`iyo` contains token (`organization`, `app_id` and `app_secret`) for authentification via [`itsyou.online`](itsyou.online). If `ioy` is not given, `no-auth` flag is set for `zstor` server and no authentification is performed during the benchmark.
+`iyo` contains token (`organization`, `app_id` and `app_secret`) for authentification via [`itsyou.online`](https://itsyou.online). If `ioy` is not given, `no-auth` flag is set for `zstor` server and no authentification is performed during the benchmark.
 
   * `benchmarks` contains information to build multiple benchmark scenarios. In case if `benchmarks` is not provided, the benchmark will run for a single set of parameters, provided in `template`.
 
@@ -87,9 +87,9 @@ profile: cpu
 # * in the output figures 'prime_parameter.range' is used in the x-axis, while 'second_parameter.range' enables multiplot.
 # ** if both 'operations' and 'duration' are given, interrupts when any of them has reached the limit
 ```
-`result_output` defines time interval to collect intermetiate data throughout the benchmark and takes values `per_second`, `per_minute` or `per_hour`. These samples are used to create timeplots during the benchmark. The timeplots by default are collected in `timeplots.md` If `result_output` is empty of invalid, timeplots are not included.
+`result_output` defines time interval to collect intermetiate data throughout the benchmark and takes values `per_second`, `per_minute` or `per_hour`. These samples are used to create timeplots during the benchmark. The timeplots by default are collected in `timeplots.md` If `result_output` is empty or invalid timeplots are not included.
 
-Here is example of the output figures:
+Here is an example of the output figures:
 
 ![Fig](assets/fig1.png) 
 ![Fig](assets/fig2.png) 
