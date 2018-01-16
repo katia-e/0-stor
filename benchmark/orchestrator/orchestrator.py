@@ -5,10 +5,7 @@
 
 import sys
 import signal
-import time
 from argparse import ArgumentParser
-from argparse import SUPPRESS
-from yaml import dump
 from lib import Config
 from lib import Report
 

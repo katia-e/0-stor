@@ -90,7 +90,8 @@ scenarios:
       pipeline:
         block_size: 4096
         compression:
-          mode: default
+          type: snappy # snappy is the default, other options: lz4, gzip
+          mode: default # default is the default, for gzip other options: best_speed, best_compression
         encryption:
           private_key: ab345678901234567890123456789012
         distribution:
@@ -103,7 +104,7 @@ scenarios:
       operations: 0
       key_size: 48
       value_size: 128
-      clients: 1
+      clients: 1 # number of concurrent clients
 ```
 
 ## Output file

@@ -1,16 +1,13 @@
 """
     Package config includes functions to set up configuration for benchmarking scenarios
 """
-import pdb
-import sys
 import time
 import os
 from re import split
 from copy import deepcopy
+from subprocess import check_output
 import yaml
 from lib.zstor_local_setup import SetupZstor
-from subprocess import run
-from subprocess import check_output
 
 class InvalidBenchmarkConfig(Exception):
     pass
@@ -20,12 +17,13 @@ PARAMETERS = {'block_size',
               'key_size',
               'value_size',
               'clients',
-              'mode',
               'method',
               'block_size',
               'data_shards',
               'parity_shards',
               'meta_shards_nr'}
+PARAMETERS_DICT = {'encryption': 'type',
+                   'compression': {'type', 'mode'}}
 
 PROFILES = {'cpu', 'mem', 'trace', 'block'}
 
@@ -46,7 +44,6 @@ class Config:
                 config = yaml.load(stream)
             except yaml.YAMLError as exc:
                 raise exc
-
         # fetch template config for benchmarking
         self._template0 = config.pop('template', None)
         self.restore_template()
@@ -98,18 +95,21 @@ class Config:
         else:
             yield BenchmarkPair()
 
-    def alter_template(self, id, val): 
+    def alter_template(self, key_id, val): 
         """
         Recurcively search and ppdate @id config field with new value @val
         """
-        def replace(d, id, val):
+        def replace(d, key_id, val):
             for key in list(d.keys()):
                 v = d[key]
                 if isinstance(v, dict):
-                    if replace(v, id, val):
+                    if isinstance(key_id, dict):
+                        if key == list(key_id.items())[0][0]:
+                            return replace(v, key_id[key], val)
+                    if replace(v, key_id, val):
                         return True
                 else:
-                    if key == id:
+                    if key == key_id:
                         parameter_type = type(d[key])
                         try:
                             d[key] = parameter_type(val)
@@ -117,8 +117,8 @@ class Config:
                             raise InvalidBenchmarkConfig("for '{}' cannot convert val = {} to type {}".format(key,val,parameter_type))
                         return True
             return False
-        if not replace(self.template, id, val):
-            raise InvalidBenchmarkConfig("parameter %s is not supported"%id)
+        if not replace(self.template, key_id, val):
+            raise InvalidBenchmarkConfig("parameter %s is not supported"%key_id)
 
     def restore_template(self):
         """ Restore initial zstor config """
@@ -192,26 +192,41 @@ class Config:
                     servers += 1
                 if time.time() > timeout:
                     raise TimeoutError("couldn't run all required servers. Check that ports are free")
-        
+
 class Benchmark():
     """ Benchmark class is used defines and validates benchmark parameter """
 
     def __init__(self, parameter={}):
+       
         if parameter:
+            self.id = parameter.get('id', None)
+            self.range = parameter.get('range', None)
+            if not self.id or not self.range:
+                raise InvalidBenchmarkConfig("parameter id or range is missing")
+            
+            if isinstance(self.id, dict):
+                def contain(d, id):
+                    if isinstance(d, dict) and isinstance(id, dict):
+                        for key in list(d.keys()):
+                            if id.get(key, None):
+                                if contain(d[key], id[key]):
+                                    return True
+                    else:    
+                        if id in d:
+                            return True
+                    return False
+                if not contain(PARAMETERS_DICT, self.id):
+                    raise InvalidBenchmarkConfig("parameter {0} is not supported".format(self.id))
+            else:
+                if self.id not in PARAMETERS:
+                    raise InvalidBenchmarkConfig("parameter {0} is not supported".format(self.id))
+             
+            
             try:
-                self.id = parameter['id']
+                self.range = split("\W+", self.range)
             except:
-                raise InvalidBenchmarkConfig("parameter id is missing")
-            if not self.id:
-                raise InvalidBenchmarkConfig("parameter id is empty")   
-            if self.id not in PARAMETERS:
-                raise InvalidBenchmarkConfig("parameter {0} is not supported".format(self.id))
-            try:
-                self.range = split("\W+", parameter['range'])
-            except:
-                raise InvalidBenchmarkConfig("parameter range is missing")
-            if not range:
-                raise InvalidBenchmarkConfig("range is missing {0}".format(self.id))
+                pass
+
         else:
             # return empty Benchmark
             self.range = [' ']
@@ -222,7 +237,6 @@ class Benchmark():
         if (len(self.range) == 1) and not self.id:
             return True
         return False
-
 class BenchmarkPair():
     """
     BenchmarkPair defines primary and secondary parameter for benchmarking

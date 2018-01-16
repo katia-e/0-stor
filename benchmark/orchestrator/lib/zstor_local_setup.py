@@ -71,13 +71,7 @@ class SetupZstor:
     def stop_zstordb_servers(self):
         for node in self.zstor_nodes:
             node.terminate()
-            _, err = node.communicate(timeout=5)
-            # returned code is positive when failed (2 or 255)
-            # and -15 when successfully terminated
-            if node.returncode > 0:
-                print("zstor server exited with code %d:" % node.returncode)
-                print(err.decode())
-                print()
+
 
         self.zstor_nodes = []
         self.data_shards = []
@@ -136,14 +130,6 @@ class SetupZstor:
 
         for node in self.etcd_nodes:
             node.terminate()
-            _, err = node.communicate(timeout=5)
-
-            # returned code is positive when failed (2 or 255)
-            # and -15 when successfully terminated
-            if node.returncode > 0:
-                print("etcd server exited with code %d:" % node.returncode)
-                print(err.decode())
-                print()
 
         self.etcd_nodes = []
         self.meta_shards = []
@@ -151,7 +137,7 @@ class SetupZstor:
     def cleanup(self):
         """ Delete all directories in cleanup """
         while self.cleanup_dirs:
-            shutil.rmtree(self.cleanup_dirs.pop())
+            shutil.rmtree(self.cleanup_dirs.pop(), ignore_errors=True)
 
     @staticmethod
     def bench_client(profile=None,

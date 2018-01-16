@@ -20,23 +20,23 @@
 import os
 import matplotlib.pyplot as plt
 import yaml
-import sys
 
 class InvalidBenchmarkResult(Exception):
+    """ Defines invalid benchmark exception"""
     pass
 
 TIME_UNITS = {'per_second': 1,
-             'per_minute': 60,
-               'per_hour': 3600}
+              'per_minute': 60,
+              'per_hour': 3600}
 
-FILTER_KEYS={'organization',
-            'namespace',
-            'iyo',
-            'shards',
-            'db',
-            'hashing',
-            'datastor',
-            'metastor'}
+FILTER_KEYS = {'organization',
+                'namespace',
+                'iyo',
+                'shards',
+                'db',
+                'hashing',
+                'datastor',
+                'metastor'}
 
 class Aggregator:
     """ Aggregator aggregates average throughput over a set of benchmarks """
@@ -98,22 +98,24 @@ class Report:
         self.filter(self.scenario, FILTER_KEYS)
 
     @staticmethod
-    def filter(d, filter_keys):
+    def filter(dictionary, filter_keys):
         """
         Recursively delete keys from dictionary.
         @ filter_keys specifies list  of keys
         """
 
-        def filter(d, filter_keys):
-            for key in list(d.keys()):
-                v = d[key]
-                if key in filter_keys:
-                    d.pop(key, None)
-                else:
-                    if isinstance(v, dict):
-                        filter(v, filter_keys)
+        def filter_dict(dictionary, filter_keys):
+            """ Delete @filter_keys from @dictionary"""
 
-        filter(d, filter_keys)
+            for key in list(dictionary.keys()):
+                val = dictionary[key]
+                if key in filter_keys:
+                    dictionary.pop(key, None)
+                else:
+                    if isinstance(val, dict):
+                        filter_dict(val, filter_keys)
+
+        filter_dict(dictionary, filter_keys)
 
     def aggregate(self, input_file):
         self.get_scenario_config(input_file)
@@ -222,15 +224,11 @@ class Report:
 
         max_throughput = max(max(self.aggregator.throughput))
 
-        """ figure settings """
+        # figure settings
         n_plots = len(self.aggregator.throughput[0]) # number of plots in the figure
-
         n_samples = len(rng) # number of samples for each data set
-
         width = rng[-1]/(n_samples*n_plots+1) # bar width
-
         gap = width/10  # gap between bars
-
         diff_y = 0.06 # minimal relative difference in throughput between neighboring bars
         label_y_gap = max_throughput/100
 
@@ -246,7 +244,7 @@ class Report:
         # define color cycle
         ax.set_color_cycle(['blue', 'red', 'green', 'yellow', 'black', 'brown'])
 
-        ax.set_xlabel(self.aggregator.benchmark.prime.id)
+        ax.set_xlabel(yaml.dump(self.aggregator.benchmark.prime.id))
         ax.set_ylabel('throughput, byte/s')
 
         # loop over data sets
@@ -294,13 +292,13 @@ class Report:
                 </style>
             </head>
             <table>  
-                <tr> <th> """ + self.aggregator.benchmark.prime.id + "</th>")
+                <tr> <th> """ + yaml.dump(self.aggregator.benchmark.prime.id) + "</th>")
             # add titles to the columns
-            for item in self.aggregator.benchmark.second.range: 
+            for item in self.aggregator.benchmark.second.range:
                 if self.aggregator.benchmark.second.id:
-                    outfile.write("<th> {0} = {1} </th>".format(self.aggregator.benchmark.second.id, item))
+                    outfile.write("<th> {0} = {1} </th>".format(yaml.dump(self.aggregator.benchmark.second.id), item))
                 else:
-                    outfile.write("<th>  </th>")       
+                    outfile.write("<th>  </th>") 
             outfile.write(" </tr> ")
 
             # fill in the table

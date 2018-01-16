@@ -54,6 +54,10 @@ benchmarks: # list of benchmark scenarios
   second_parameter:
     id: clients
     range: 1, 2, 3
+- prime_parameter:    # primary parameter of the benchmark *
+    id:
+      compression: mode       # id of the secondary parameter that is being benchmarked
+    range: default, best_speed, best_compression    
 template:         # config for benchmark client
   zstor_config:   
     namespace: mynamespace # itsyou.online namespace
@@ -63,8 +67,9 @@ template:         # config for benchmark client
       app_secret: secret   # itsyou.online Secret
     pipeline:
       block_size: 2048 
-      compression:
-        mode: default
+      compression:  # snappy is the default, other options: lz4, gzip
+        type: gzip # snappy is the default, other options: lz4, gzip
+        mode: default # default is the default, for gzip other options: best_speed, best_compression
       distribution:
         data_shards: 2
         parity_shards: 1
@@ -88,5 +93,6 @@ Here is example of the output figures:
 
 ![Fig](assets/fig1.png) 
 ![Fig](assets/fig2.png) 
+![Fig](assets/fig3.png) 
 
 

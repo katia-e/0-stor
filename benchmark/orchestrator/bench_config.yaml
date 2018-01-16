@@ -2,28 +2,32 @@
 benchmarks: # list of benchmark scenarios
 - prime_parameter:    # primary parameter of the benchmark *
     id: value_size    # id of the primary parameter that is being benchmarked
-    range: 128, 256, 512, 1024, 2048, 4096 # values of the primary parameter
+    range: 128, 256, 512, 1024, 2048, 4096, 8192 # values of the primary parameter
   second_parameter:    # secondary parameter of the benchmark *
     id: key_size       # id of the secondary parameter that is being benchmarked
-    range: 24, 48, 96  # values of the primary parameter
+    range: 32, 64, 128 # values of the primary parameter
 - prime_parameter:
     id: data_shards   
     range: 1,2,5,10,20
   second_parameter:
     id: clients
     range: 1, 2, 3
+- prime_parameter:    # primary parameter of the benchmark *
+    id:
+      compression: mode       # id of the secondary parameter that is being benchmarked
+    range: default, best_speed, best_compression
 template:         # config for benchmark client
   zstor_config:   
     namespace: mynamespace # itsyou.online namespace
     iyo:  # itsyou.online authentification token
       organization: myorg  # itsyou.online organization name
       app_id: appID        # itsyou.online Application ID
-      app_secret: secret   # itsyou.online Secret
+      app_secret: secret   # itsyou.online Secret  
     pipeline:
       block_size: 4096
       compression:
-        type: snappy # snappy is the default, other options: lz4, gzip
-        mode: default # default is the default, other options: best_speed, best_compression
+        type: gzip # snappy is the default, other options: lz4, gzip
+        mode: default # default is the default, for gzip other options: best_speed, best_compression
       encryption:
         type: aes # aes is the default and only standard option
         private_key: ab345678901234567890123456789012

@@ -1,25 +1,38 @@
 scenarios:
-  write: # name of the first scenario
-    zstor_config: # zstor config
-      data_shards:
-        - 127.0.0.1:12345
-        - 127.0.0.1:12346
-        - 127.0.0.1:12347
-        - 127.0.0.1:12348
-      meta_shards:
-        - 127.0.0.1:2379
-      block_size: 4096
-      replication_nr: 0
-      replication_max_size: 0
-      distribution_data: 0
-      distribution_parity: 0
-      compress: false
-      encrypt: false
-      encrypt_key: ""
-    bench_conf:                    # config for benchmarking
-      method: write                # name of a benchmarking method
-      result_output: per_second    # time interval of data collection
-      duration: 30                 # duration of the benchmarking in seconds
-      operations: 0                # number of operations
-      key_size: 48                 # key size in bytes
-      ValueSize: 4096              # value size in bytes
+  bench1:
+    zstor_config:
+      iyo:  # if empty or omitted, the zstordb servers set up for the benchmark 
+            # need to be run with the no-auth flag.
+            # For benching with authentication, provide it with valid itsyou.online credential
+        organization: "bench_org"
+        app_id: "an_iyo_bench_app_id"
+        app_secret: "an_iyo_bench_app_secret"
+      namespace: adisk
+      datastor:
+        shards:
+        - 127.0.0.1:45627
+        - 127.0.0.1:49861
+        - 127.0.0.1:37355
+      metastor:
+          shards: # If empty or omitted, an in memory metadata server will be used
+                  # Otherwise it will presume to have etcd servers running on these addresses
+            - 127.0.0.1:1300
+            - 127.0.0.1:1301
+      pipeline:
+        block_size: 4096
+        compression:
+          type: snappy # snappy is the default, other options: lz4, gzip
+          mode: default # default is the default, for gzip other options: best_speed, best_compression
+        encryption:
+          private_key: ab345678901234567890123456789012
+        distribution:
+          data_shards: 2
+          parity_shards: 1
+    bench_config:
+      method: write
+      result_output: per_second # if empty or invalid, perinterval in the result will be empty
+      duration: 5
+      operations: 0
+      key_size: 48
+      value_size: 128
+      clients: 1  # number of concurrent clients
