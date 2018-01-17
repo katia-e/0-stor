@@ -21,7 +21,8 @@ PARAMETERS = {'block_size',
               'block_size',
               'data_shards',
               'parity_shards',
-              'meta_shards_nr'}
+              'meta_shards_nr',
+              'GOMAXPROCS'}
 PARAMETERS_DICT = {'encryption': 'type',
                    'compression': {'type', 'mode'}}
 
@@ -45,17 +46,22 @@ class Config:
             except yaml.YAMLError as exc:
                 raise exc
         # fetch template config for benchmarking
-        self._template0 = config.pop('template', None)
+        self._template0 = config.get('template', None)
         self.restore_template()
+
+        # fetch bench_config from template
+        bench_config = self.template.get('bench_config', None)
+        if not bench_config:
+            raise InvalidBenchmarkConfig('no bench_config given in template')
+        self.gomaxprocs = bench_config.get('GOMAXPROCS', 0)
 
         if not self.template:
             raise InvalidBenchmarkConfig('no zstor config given')
 
         # extract benchmarking parameters
         self.benchmark = iter(self.benchmark_generator(config.pop('benchmarks', None)))
-
         # extract profiling parameter
-        self.profile = config.pop('profile', None)
+        self.profile = config.get('profile', None)
 
         if self.profile and (self.profile not in PROFILES):
             raise InvalidBenchmarkConfig("profile mode '%s' is not supported"%self.profile)
@@ -160,7 +166,9 @@ class Config:
     def deploy_zstor(self):
         """ Run zstordb and etcd servers """
 
-        self.deploy.run_zstordb_servers(servers=self.data_shards_nr, no_auth=self.no_auth)
+        self.deploy.run_zstordb_servers(servers=self.data_shards_nr,
+                                        no_auth=self.no_auth,
+                                        jobs=self.gomaxprocs)
         self.deploy.run_etcd_servers(servers=self.meta_shards_nr)
 
         self.zstor_config.update({'datastor':{'shards': self.deploy.data_shards}})
