@@ -22,7 +22,7 @@ PARAMETERS = {'block_size',
               'data_shards',
               'parity_shards',
               'meta_shards_nr',
-              'GOMAXPROCS'}
+              'zstordb_jobs'}
 PARAMETERS_DICT = {'encryption': 'type',
                    'compression': {'type', 'mode'}}
 
@@ -53,7 +53,7 @@ class Config:
         bench_config = self.template.get('bench_config', None)
         if not bench_config:
             raise InvalidBenchmarkConfig('no bench_config given in template')
-        self.gomaxprocs = bench_config.get('GOMAXPROCS', 0)
+        self.zstordb_jobs = bench_config.get('zstordb_jobs', 0)
 
         if not self.template:
             raise InvalidBenchmarkConfig('no zstor config given')
@@ -168,7 +168,7 @@ class Config:
 
         self.deploy.run_zstordb_servers(servers=self.data_shards_nr,
                                         no_auth=self.no_auth,
-                                        jobs=self.gomaxprocs)
+                                        jobs=self.zstordb_jobs)
         self.deploy.run_etcd_servers(servers=self.meta_shards_nr)
 
         self.zstor_config.update({'datastor':{'shards': self.deploy.data_shards}})

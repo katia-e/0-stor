@@ -83,7 +83,7 @@ template:         # config for benchmark client
     duration: 30    # max duration of the benchmark **
     key_size: 48
     value_size: 128
-    GOMAXPROCS: 512 # optional; default 0
+    zstordb_jobs: 512 # defines GOMAXPROCS for zstordb. optional; default 0
 profile: cpu
 # * in the output figures 'prime_parameter.range' is used in the x-axis, while 'second_parameter.range' enables multiplot.
 # ** if both 'operations' and 'duration' are given, interrupts when any of them has reached the limit
