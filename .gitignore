@@ -42,7 +42,9 @@ _testmain.go
 # benchmark
 benchmark.yaml
 benchmark/orchestrator/report
+benchmark/orchestrator/*.yaml
 !/benchmark/assets/*.png
+!/benchmark/assets/example_report/*.png
 
 # Jetbrains
 .idea
