@@ -1,21 +1,35 @@
-# zstor benchmark client
+# zstorbench
 
-Benchmark client provides tools for benchmarking and profiling zstor client for various scenarios.
-
-Configuration for benchmarking scenarios should be given in YAML format (see [example](#benchmark-config) of the config file bellow).
-Benchmarking program outputs results for all provided scenarios to a single output file in YAML format (see [example](#output file) of the output file bellow). 
-
+Zstorbench is a benchmark client/tool to test the performance of `zstor` (`0-stor`).
 
 ## Getting started
-Install all necessary `zstor` components by running
+Download the `zstor`repository.
+```bash
+git clone https://github.com/zero-os/0-stor.git
+
+# or 
+go get github.com/zero-os/0-stor
+# note: this will throw an error because the root of zstor does not contain any Go files.
+```
+
+Install the `zstor` components by running following command in the zstor root of the repository:
 ```bash
 make install
 ```
-In order to start a benchmarking run, all necessary [zstor servers](https://github.com/zero-os/0-stor/blob/master/docs/gettingstarted.md) have to be set up.
 
-Start the benchmarking
+Before starting a benchmark, make sure the necessary services for zstor are running.  
+A guide to set up zstordb's can her found [here](https://github.com/zero-os/0-stor/blob/master/docs/gettingstarted.md).
+To set up etcd metadata server, check the etcd [documentation](https://coreos.com/etcd/docs/latest/).
+Zstor requires	etcd 3.2.4 or any higher stable release.
+
+Start the benchmarking by providing zstorbench with a [config](#Benchmark-config) file.
 ``` bash
 zstorbench -C config.yaml --out-benchmark benchmark.yaml
+```
+
+Start benchmarking with profiling
+``` bash
+zstorbench -C config.yaml --profile-mode cpu --out-profile "outputProfileInfo"
 ```
 
 `zstorbench` has the following options:
@@ -27,44 +41,43 @@ zstorbench -C config.yaml --out-benchmark benchmark.yaml
       --profile-mode string    enable profiling mode, one of [cpu, mem, trace, block]
 ```
 
-
-Start benchmarking with optional input/output files
-``` bash
-zstorbench --conf "input_config.yaml" --out-benchmark "output_benchmark.yaml"
-```
-
-Start benchmarking and profiling
-``` bash
-zstorbench --out-profile "outputProfileInfo" --profile-mode cpu
-```
-
 ## Benchmark config
 
 Client config contains a list of scenarios. 
-Each scenario is associated with a corresponding scenarioID and provides two sets of parameters: 
-`zstor_config` and `bench_conf`.
-Structure `zstor_config` are nessesary to create a `zstor client` and can be parsed into a type `client.Policy` of [zstor client package](https://github.com/zero-os/0-stor/tree/master/client). 
+Each scenario is associated with a corresponding scenarioID and contains 2 main fields: 
+* `zstor_config` representing the config for the zstor client
+* `bench_conf` representing the configuration of the benchmarking
 
-`iyo` has to be given in case if `zstor` server is running with flag `--no-auth` and, therefore, require no authentification via `itsyou.online`.
-Note, that invalid `ioy` token lead to an error even if authentification is unset.
+The `zstor_config` represents a zstor config. More details can be found [here](../zstor/README.md#Configuration).
 
-Structure `bench_conf` represents such benchmark parameters like duration of the performance test, maximum number of operations, maximum benchmark duration and output format.
-One of two parameters `duration` and `operations` has to be provided. If both are given, the benchmarking program terminates as soon as one of the following events occurs:
- + number of executed operations reached `operations`
- + timeout set by `duration` elapsed
+The `iyo` field of the `zstor_config` contains the credentials for [`itsyou.online`](https://itsyou.online), used for authentication during the benchmark. If the sub fields are empty or the `iyo` field itself is omitted, the benchmarks will run without authentication.  
+If authentification is enabled, the `namespace` fields needs to be a valid [`itsyou.online`](https://itsyou.online) namespace, if authentification is disabled, any name can be used or it can be omitted for a random one to be generated.
 
-`method` defines which operation is benchmarked:
- + `read` - for reading from zstor
- + `write` - for writing to zstor
+If the `db` `endpoints` of the `metastor` field in the `zstor_config` is empty or omitted, `zstorbench` will use in-memory metadata storage. This in-memory metadata storage is not meant for production, but allows for benchmarking without a remote metadata server being a potential bottleneck.
 
-`result_output` specifies interval of the data collection (`perinterval` in the results) and can take values:  
- + per_second
- + per_minute
- + per_hour
+The `bench_conf` represents the benchmarking parameters.
 
-if empty or invalid, there will be no interval data collection.
+The `method` field of the `bench_conf` defines which operation is benchmarked.  
+Current supported operations are:
+* `read` - for reading from zstor
+* `write` - for writing to zstor
 
-The following example of a config file represents a benchmarking scenario `bench1`.
+The `result_output` field of the `bench_conf` specifies interval of the data collection (`perinterval` in the results) and can take values:  
+* per_second
+* per_minute
+* per_hour
+If empty or invalid, there will be no interval data collection.
+
+The `duration` and `operations` sub fields describe the condition that end the benchmark. One of them should be given for a valid configuration.  
+If only `duration` is given, the benchmark will end when the time elapsed defined by this field (in seconds) has been reached.  
+If only `operations` is given, the benchmark will end when the amount of operations defined by this field has been reached.  
+If both of them are given, the benchmark will end when the first condition has been reached.
+
+The `key_size` and `value_size` sub fields define the length of the key and value respectively which will be used during the benchmarks.
+
+The `clients` sub field defines the amount of concurrent benchmarking clients that execute the benchmark on the zstor setup defined in the `zstor_config`.
+
+Example of a config YAML file for zstorbench:
 
 ``` yaml
 scenarios:
@@ -112,7 +125,7 @@ scenarios:
 
 ## Output file
 
-Benchmarking program writes results of the performance tests to an output file. All scenario configuration is collected in `scenario`. All numerical results can be fetched from `results`.
+`Zstorbench` writes the results to a YAML file. It will contain a list of the supplied scenarios by the config file and adds a `result` field to each scenario. If a scenario has failed, there will be an `error` field instead of the `result` field.
 
 ``` yaml
 scenarios:
