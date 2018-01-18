@@ -201,21 +201,26 @@ type Item struct {
 	key  []byte
 	val  []byte
 	done func()
+	mux  sync.Mutex
 }
 
 // Key implements interface Item.Key
 func (item *Item) Key() []byte {
-	if item.done == nil {
+	err := item.checkIfDoneIsNil()
+	if err != nil {
 		return nil
 	}
+
 	return item.key
 }
 
 // Value implements interface Item.Value
 func (item *Item) Value() ([]byte, error) {
-	if item.done == nil {
-		return nil, db.ErrClosedItem
+	err := item.checkIfDoneIsNil()
+	if err != nil {
+		return nil, err
 	}
+
 	return item.val, nil
 }
 
@@ -224,7 +229,9 @@ func (item *Item) Error() error { return nil }
 
 // Close implements interface Item.Close
 func (item *Item) Close() error {
+	item.mux.Lock()
 	if item.done == nil {
+		item.mux.Unlock()
 		return db.ErrClosedItem
 	}
 
@@ -233,6 +240,22 @@ func (item *Item) Close() error {
 	// and we can move on to the next item or finish the update.
 	item.done()
 	item.done = nil
+
+	item.mux.Unlock()
+	return nil
+}
+
+// checkIfDoneIsNil checks if item.done is nil.
+// item.done is checked under a lock.
+// Returns db.ErrClosedItem when done is nil.
+func (item *Item) checkIfDoneIsNil() error {
+	item.mux.Lock()
+	if item.done == nil {
+		item.mux.Unlock()
+
+		return db.ErrClosedItem
+	}
+	item.mux.Unlock()
 
 	return nil
 }
