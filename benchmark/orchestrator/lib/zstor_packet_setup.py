@@ -24,22 +24,23 @@ class SetupZstorPacket:
         zstorbench0
     """
     def __init__(self, token):
-        self.p_client = j.clients.packetnet.get(auth_token=token)
+        #import ipdb; ipdb.set_trace()
+        self.p_client = j.clients.packetnet.get()
 
         self._meta_devices = {}
         self._meta_ips = {}
         self._meta_lock = Lock()
-        self.meta_addresses = []
+        self.meta_shards = []
 
         self._zstordb_devices = {}
         self._zstordb_lock = Lock()
         self.zstordb_prof = False
         self.zstordb_prof_dest = "."
-        self.zstordb_addresses = []
+        self.data_shards = []
 
         self.zstorbench_prefab = None
 
-    def init_and_run_zstordb(self, servers=2, facility='ams1', plan="baremetal_0", os="ubuntu_16_04", \
+    def run_data_shards(self, servers=2, facility='ams1', plan="baremetal_0", os="ubuntu_16_04", \
     no_auth=True, jobs=0, port=1230, profile=None, profile_dest="./zstordb_profile", \
     branch="master"):
         """
@@ -64,8 +65,6 @@ class SetupZstorPacket:
         for t in ts:
             t.join()
 
-        return self.zstordb_addresses
-
     def _setup_new_zstordb_machine(self, i, plan, os, facility, port, no_auth, jobs, profile, branch):
         """
         Creates new packet device and installs zstordb onto it.
@@ -76,7 +75,7 @@ class SetupZstorPacket:
         ip = get_machine_ip(self.p_client.client.auth_token, device.id)
 
         self._zstordb_lock.acquire()
-        self.zstordb_addresses.append(ip + ":" + str(port))
+        self.data_shards.append(ip + ":" + str(port))
         self._zstordb_lock.release()
 
         install_zstor(prefab, branch)
@@ -101,7 +100,7 @@ class SetupZstorPacket:
         self._zstordb_devices[name] = prefab
         self._zstordb_lock.release()
 
-    def stop_zstordb(self,):
+    def stop_data_shards(self,):
         """
         Stop all packet.net devices running a zstordb.
         Retrieve profile result if required.
@@ -120,7 +119,7 @@ class SetupZstorPacket:
 
             self.p_client.removeDevice(hostname)
 
-    def init_and_run_meta(self, servers=1, facility='ams1', plan="baremetal_0", os="ubuntu_16_04",\
+    def run_meta_shards(self, servers=1, facility='ams1', plan="baremetal_0", os="ubuntu_16_04",\
     etcd_version="3.2.13", client_port=1200, peer_port=1300):
         """
         Run etcd metadata server(s) on new packet.net devices
@@ -142,14 +141,12 @@ class SetupZstorPacket:
 
         # build data to run etcd
         for name, ip in self._meta_ips.items():
-            self.meta_addresses.append(ip + ":" + str(client_port))
+            self.meta_shards.append(ip + ":" + str(client_port))
             init_cluster += name + "=http://"+ ip + ":" + str(peer_port) + ","
 
         for i, (hostname, prefab) in enumerate(self._meta_devices.items()):
             # run etcd
             run_etcd(prefab, hostname, self._meta_ips[hostname], peer_port, client_port, init_cluster)
-
-        return self.meta_addresses
 
     def _setup_new_meta_machine(self,i, plan, os, facility, etcd_version):
         """
@@ -170,7 +167,7 @@ class SetupZstorPacket:
         self._meta_devices[name] = prefab
         self._meta_lock.release()
 
-    def stop_meta(self,):
+    def stop_meta_shards(self,):
         """Stop all packet.net device running etcd"""
         for hostname, prefab in self._meta_devices.items():
             pass
@@ -189,7 +186,7 @@ class SetupZstorPacket:
 
         self.zstorbench_prefab = prefab
 
-    def run_zstorbench(self, config="./config.yaml", out="./result.yaml",\
+    def run_data_shards(self, config="./config.yaml", out="./result.yaml",\
     profile=None, profile_dest="./zstordb_profile/"):
         """
         Start a zstorbench benchmark.
@@ -222,8 +219,8 @@ class SetupZstorPacket:
     def stop(self,):
         """stop all packet.net devices started by this instance """
         self.stop_zstorbench()
-        self.stop_zstordb()
-        self.stop_meta()
+        self.stop_data_shards()
+        self.stop_meta_shards()
 
 def install_zstor(prefab, branch="master"):
     """

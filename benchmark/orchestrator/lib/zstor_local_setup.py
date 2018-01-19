@@ -14,10 +14,10 @@ class SetupZstor:
         self.zstor_nodes = []
         self.etcd_nodes = []
         self.cleanup_dirs = []
-        self.data_shards = []
         self.meta_shards = []
+        self.data_shards = []
 
-    def run_zstordb_servers(self,
+    def run_zstordb(self,
                             servers=2,
                             no_auth=True,
                             jobs=0,
@@ -67,16 +67,17 @@ class SetupZstor:
 
             self.zstor_nodes.append(subprocess.Popen(args, stderr=subprocess.PIPE))
 
+    def stop_zstorbench(self):
+        return
+
     # stop zstordb servers
-    def stop_zstordb_servers(self):
+    def stop_data_shards(self):
         for node in self.zstor_nodes:
             node.terminate()
-
-
         self.zstor_nodes = []
         self.data_shards = []
 
-    def run_etcd_servers(self, servers=2, data_dir=""):
+    def run_etcd(self, servers=2, data_dir=""):
         """ Start etcd servers on random free ports """
 
         cluster_token = "etcd-cluster-" + str(randint(0, 99))
@@ -125,7 +126,7 @@ class SetupZstor:
                                                     stdout=subprocess.PIPE,
                                                     stderr=subprocess.PIPE))
 
-    def stop_etcd_servers(self):
+    def stop_meta_shards(self):
         """ Stop etcd servers """
 
         for node in self.etcd_nodes:
@@ -139,8 +140,15 @@ class SetupZstor:
         while self.cleanup_dirs:
             shutil.rmtree(self.cleanup_dirs.pop(), ignore_errors=True)
 
+    def stop(self):
+        """ Stop zstordb and etcd servers """        
+
+        self.stop_meta_shards()
+        self.stop_data_shards()
+        self.cleanup()
+
     @staticmethod
-    def bench_client(profile=None,
+    def run_zstorbench(profile=None,
                      profile_dir="profile_client",
                      config="client_config.yaml",
                      out="bench_result.yaml"):

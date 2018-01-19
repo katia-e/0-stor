@@ -8,6 +8,7 @@ from copy import deepcopy
 from subprocess import check_output
 import yaml
 from lib.zstor_local_setup import SetupZstor
+from lib.zstor_packet_setup import SetupZstorPacket
 
 class InvalidBenchmarkConfig(Exception):
     pass
@@ -27,6 +28,9 @@ PARAMETERS_DICT = {'encryption': 'type',
                    'compression': {'type', 'mode'}}
 
 PROFILES = {'cpu', 'mem', 'trace', 'block'}
+
+LOCAL_DEPLOYMENT = 'local'
+PACKETS_DEPLOYMENT = 'packet.net'
 
 class Config:
     """
@@ -67,8 +71,19 @@ class Config:
             raise InvalidBenchmarkConfig("profile mode '%s' is not supported"%self.profile)
 
         self.count_profile = 0
+        
+        # extract branch
+        self.branch = config.get('branch', '1.1.0-beta-2')
 
-        self.deploy = SetupZstor()
+        # check packet.net config, if not given set up local deployment
+        self.packets = config.get('packets', None)
+        if self.packets:
+            self.deployment = LOCAL_DEPLOYMENT
+            token = self.packets.get('token', None)
+            self.deploy = SetupZstorPacket(token)
+        else:
+            self.deployment = PACKETS_DEPLOYMENT
+            self.deploy = SetupZstor()
 
     def new_profile_dir(self, path=""):
         """
@@ -166,26 +181,23 @@ class Config:
     def deploy_zstor(self):
         """ Run zstordb and etcd servers """
 
-        self.deploy.run_zstordb_servers(servers=self.data_shards_nr,
+        self.deploy.run_zstordb(servers=self.data_shards_nr,
                                         no_auth=self.no_auth,
                                         jobs=self.zstordb_jobs)
-        self.deploy.run_etcd_servers(servers=self.meta_shards_nr)
+        self.deploy.run_etcd(servers=self.meta_shards_nr)
 
-        self.zstor_config.update({'datastor':{'shards': self.deploy.data_shards}})
-        self.metastor.update({'shards': self.deploy.meta_shards})
+        if self.deployment == LOCAL_DEPLOYMENT:
+            # wait for servers to start
+            self.wait_local_servers_to_start()            
 
-    def stop_zstor(self):
-        """ Stop zstordb and etcd servers """        
-
-        self.deploy.stop_etcd_servers()
-        self.deploy.stop_zstordb_servers()
-        self.deploy.cleanup()
+        self.zstor_config.update({'datastor':{'shards': self.deploy.zstordb_addresses}})
+        self.metastor.update({'shards': self.deploy.meta_addresses})
 
 
     def wait_local_servers_to_start(self):
         """ Check whether ztror and etcd servers are listening on the ports """
 
-        addrs = self.deploy.data_shards + self.deploy.meta_shards
+        addrs = self.deploy.zstordb_addresses + self.deploy.meta_addresses
         servers = 0
         timeout = time.time() + 20
         while servers < len(addrs):

@@ -90,18 +90,15 @@ def main(argv):
                         # update config file
                         config.save(output_config)
 
-                        # wait for servers to start
-                        config.wait_local_servers_to_start()
-
                         # perform benchmarking
-                        config.deploy.bench_client(config=output_config,
+                        config.deploy.run_zstorbench(config=output_config,
                                                     out=result_benchmark_file,
                                                     profile=config.profile,
                                                     profile_dir=config.new_profile_dir(report_directory))
                         # stop zstor
-                        config.stop_zstor()
+                        config.deploy.stop()
                     except:
-                        config.stop_zstor()
+                        config.deploy.stop()
                         raise
                     # aggregate results
                     report.aggregate(result_benchmark_file)

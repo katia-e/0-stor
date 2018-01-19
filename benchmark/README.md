@@ -72,6 +72,14 @@ benchmarks: # list of benchmark scenarios
     id:
       compression: mode       # id of the secondary parameter that is being benchmarked
     range: default, best_speed, best_compression    
+branch: 1.1.0-beta-2
+packets:
+  token: token      # mandatory
+  facility: ams1    # optional, default: ams1. Packet.net facility to deploy on
+  plan: baremetal_0 # optional, default: baremetal_0. Packet.net plan (device type)
+  os: ubuntu_16_04  # optional, default: ubuntu_16_04. OS of the packet device
+  profile: cpu      # optional, default: None. Type of profiling on zstordb (None is disabled)
+  profile_dest: ./profile,  # optional, default ./profile. Destination folder where the profiling will be downloaded.
 template:         # config for benchmark client
   zstor_config:   
     namespace: mynamespace # itsyou.online namespace
