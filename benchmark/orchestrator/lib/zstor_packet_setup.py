@@ -1,6 +1,6 @@
 from js9 import j
 import packet, sys, time
-import lib.zstor_local_setup as zstor
+from lib.zstor_local_setup import is_profile_flag
 from threading import Thread, Lock
 
 # temp dir on packet device
@@ -8,7 +8,7 @@ _TMP_DIR = '/tmp'
 _PROF_DIR = _TMP_DIR + "/zstorprof"
 _ZSTORBENCH_HOSTNAME = "zstorbench0"
 _ZSTORBENCH_CONF = _TMP_DIR + "/zstorbenchconf/config.yaml"
-_ZSTORBENCH_OUT = _TMP_DIR + "/zstorbenchconf/result.yaml"
+_ZSTORBENCH_OUT = _TMP_DIR  + "/zstorbenchconf/benchmark_result.yaml"
 _DATA_DIR = _TMP_DIR + "/data"
 _META_DIR = _TMP_DIR + "/meta"
 _ETCD_DIR = _TMP_DIR + "/etcd"
@@ -23,7 +23,7 @@ class SetupZstorPacket:
         zstormeta[0-n]
         zstorbench0
     """
-    def __init__(self, token):
+    def __init__(self):
         #import ipdb; ipdb.set_trace()
         self.p_client = j.clients.packetnet.get()
 
@@ -40,9 +40,16 @@ class SetupZstorPacket:
 
         self.zstorbench_prefab = None
 
-    def run_data_shards(self, servers=2, facility='ams1', plan="baremetal_0", os="ubuntu_16_04", \
-    no_auth=True, jobs=0, port=1230, profile=None, profile_dest="./zstordb_profile", \
-    branch="master"):
+    def run_data_shards(self, servers=2, 
+                        facility='ams1', 
+                        plan="baremetal_0", 
+                        os="ubuntu_16_04",
+                        no_auth=True, 
+                        jobs=0, 
+                        port=1230, 
+                        profile=None, 
+                        profile_dest="./zstordb_profile",
+                        branch="master"):
         """
         Runs zstordb's on packet.net devices.
         Returns list of ip addresses with ports where zstordb is running,
@@ -71,33 +78,34 @@ class SetupZstorPacket:
         Is designed to run in a separate thread
         """
         name = "zstordb" + str(i)
-        device, prefab = self.p_client.startDevice(hostname=name, plan=plan, os=os, facility=facility)
-        ip = get_machine_ip(self.p_client.client.auth_token, device.id)
+        node = self.p_client.startDevice(hostname=name, plan=plan, os=os, facility=facility)
+        ip = node.addr
 
         self._zstordb_lock.acquire()
         self.data_shards.append(ip + ":" + str(port))
         self._zstordb_lock.release()
 
-        install_zstor(prefab, branch)
+        install_zstor(node.prefab, branch)
 
         # run zstordb
-        prefab.core.dir_ensure(_DATA_DIR)
-        prefab.core.dir_ensure(_META_DIR)
+        node.prefab.core.dir_ensure(_DATA_DIR)
+        node.prefab.core.dir_ensure(_META_DIR)
         cmd = "zstordb --listen %s --data-dir %s --meta-dir %s --jobs %s" \
-        % (":" + str(port), _DATA_DIR, _META_DIR, str(jobs))
+              % (":" + str(port), _DATA_DIR, _META_DIR, str(jobs))
         if no_auth:
             cmd += " --no-auth"
-        if profile and zstor.is_profile_flag(profile):
+        if profile and is_profile_flag(profile):
             profdir = _PROF_DIR + "/" + name
-            prefab.core.dir_ensure(profdir)
+            node.prefab.core.dir_ensure(profdir)
             cmd += " --profile-mode %s" % profile
             cmd += " --profile-output %s" % profdir
+
         # run zstordb in background
         cmd += " &>/dev/null &"
-        prefab.core.execute_bash(cmd)
+        node.prefab.core.execute_bash(cmd)
 
         self._zstordb_lock.acquire()
-        self._zstordb_devices[name] = prefab
+        self._zstordb_devices[name] = node.prefab
         self._zstordb_lock.release()
 
     def stop_data_shards(self,):
@@ -119,8 +127,13 @@ class SetupZstorPacket:
 
             self.p_client.removeDevice(hostname)
 
-    def run_meta_shards(self, servers=1, facility='ams1', plan="baremetal_0", os="ubuntu_16_04",\
-    etcd_version="3.2.13", client_port=1200, peer_port=1300):
+    def run_meta_shards(self, servers=1, 
+                              facility='ams1', 
+                              plan="baremetal_0", 
+                              os="ubuntu_16_04",
+                              etcd_version="3.2.13", 
+                              client_port=1200, 
+                              peer_port=1300):
         """
         Run etcd metadata server(s) on new packet.net devices
         Returns list of ip addresses with ports where etcd is running,
@@ -154,17 +167,16 @@ class SetupZstorPacket:
         Is designed to run in a separate thread
         """
         name = "zstormeta" + str(i)
-        device, prefab = self.p_client.startDevice(hostname=name, plan=plan, os=os, facility=facility)
-        ip = get_machine_ip(self.p_client.client.auth_token, device.id)
+        node = self.p_client.startDevice(hostname=name, plan=plan, os=os, facility=facility)
+        ip = node.addr
 
         self._meta_lock.acquire()
         self._meta_ips[name] = ip
         self._meta_lock.release()
         
-        install_etcd(prefab, version=etcd_version)
-
+        install_etcd(node.prefab, version=etcd_version)
         self._meta_lock.acquire()
-        self._meta_devices[name] = prefab
+        self._meta_devices[name] = node.prefab
         self._meta_lock.release()
 
     def stop_meta_shards(self,):
@@ -173,54 +185,58 @@ class SetupZstorPacket:
             pass
             self.p_client.removeDevice(hostname)
 
-    def init_zstorbench(self, branch="master", facility='ams1', plan="baremetal_0",\
-    os="ubuntu_16_04"):
+    def init_benchmark(self, 
+                        branch="master", 
+                        facility='ams1', 
+                        plan="baremetal_0",
+                        os="ubuntu_16_04"):
         """
         Sets up a zstorbench on a packet device
         """
-        _, prefab = self.p_client.startDevice(\
+        
+        node = self.p_client.startDevice(\
             hostname=_ZSTORBENCH_HOSTNAME, plan=plan, os=os, facility=facility)
 
         # install zstorbench
-        install_zstor(prefab, branch)
+        install_zstor(node.prefab, branch)
 
-        self.zstorbench_prefab = prefab
+        self.zstorbench_prefab = node.prefab
 
-    def run_data_shards(self, config="./config.yaml", out="./result.yaml",\
-    profile=None, profile_dest="./zstordb_profile/"):
+    def run_benchmark(self, config="./config.yaml", out="result.yaml",\
+    profile=None, profile_dest="./zstor_client_profile/"):
         """
         Start a zstorbench benchmark.
         Make sure to run start_zstorbench before calling this.
         """
         prefab = self.zstorbench_prefab
-
+        
         # load bench config
         prefab.core.upload(config, _ZSTORBENCH_CONF)
 
         # run benchmark
-        cmd = "zstorbench --conf %s --out-benchmark %s" % (_ZSTORBENCH_CONF, _ZSTORBENCH_OUT)
+        cmd = "zstorbench --conf %s --out-benchmark %s" % (_ZSTORBENCH_CONF, _TMP_DIR+out)
         if profile != None:
             cmd += " --profile-mode %s --out-profile %s" % (profile, _PROF_DIR)
+
         prefab.core.execute_bash(cmd)
 
         # download results and profiling if required
-        j.tools.prefab.local.core.dir_ensure(out)
-        prefab.core.download(_ZSTORBENCH_OUT, out)
+        j.tools.prefab.local.core.dir_ensure(".")
+
+        prefab.core.download(_ZSTORBENCH_OUT, ".")
         if profile != None:
             j.tools.prefab.local.core.dir_ensure(profile_dest)
             prefab.core.download(_PROF_DIR, profile_dest)
 
-    def stop_zstorbench(self):
+    def stop_benchmark(self):
         """
         stops/deletes the machine zstorbench is running on
         """
         self.p_client.removeDevice(_ZSTORBENCH_HOSTNAME)
-
-    def stop(self,):
-        """stop all packet.net devices started by this instance """
-        self.stop_zstorbench()
+    def stop(self):
         self.stop_data_shards()
         self.stop_meta_shards()
+        self.stop_benchmark()
 
 def install_zstor(prefab, branch="master"):
     """
@@ -290,17 +306,3 @@ def run_etcd(prefab, name, public_ip, peer_port, client_port, initial_cluster):
     print(cmd)
 
     prefab.core.execute_bash(cmd)
-
-def get_machine_ip(token, device_id):
-    manager = packet.Manager(auth_token=token)
-    print("Looking for IP address...")
-    for i in range(6):
-        device = manager.get_device(device_id=device_id)
-        if device.ip_addresses != []:
-            ip = device.ip_addresses[0]['address']
-            print("Found IP address %s for device %s" % (ip, device_id))
-            return ip
-        else:
-            time.sleep(10)
-    else:
-        sys.exit("ERROR : Can't get IP of device `%s`" % device_id)

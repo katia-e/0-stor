@@ -29,12 +29,21 @@ optional arguments:
   
 The orchestrator sets up a benchmarking environment (zstordb and etcd metadata servers) and uses [`zstorbench`](../cmd/zstorbench/README.md) to collect the performance data. The orchestrator will generate the config files with scenarios and environment configuration for [`zstorbench`](../cmd/zstorbench/README.md) and process the output (of multiple zstorbench runs) to generate a report.
 
-### Orchestrator config file
+### Supported deployment options:
+  * local - deploys `zstor` servers on 1 local device
+  * `packet.net` - deploys `zstor` servers on a [`packet.net`](https://packet.net) device. 
+
+### Orchestrator config
+
 Config file for the `benchmark orchestrator` consists of three parts (main fields):
 
   * `benchmarks`: configuration of what to benchmark
   * `template`: template configuration for [`zstorbench`](../cmd/zstorbench/README.md) client
   * `profile`: defines the type of profiling that's done during benchmarking
+
+Additional optional fields are:
+  * `packet.net`: configuration for `packet.net` deployment. More information of [`packet.net`](https://packet.net). If field is not given, `zstor` servers are deployed locally. Additional instructions for [`packet.net`](https://packet.net) deployment are given [bellow](#packet.det-deployment)
+  * `branch`: defines a branch for benchmarking and used for [`packet.net`](https://packet.net) deployment.
 
 The `benchmarks` field contains information to build the benchmarking scenarios. In case if `benchmarks` is not provided, the benchmark will run for a single set of parameters, provided in the `template`.
 
@@ -72,14 +81,14 @@ benchmarks: # list of benchmark scenarios
     id:
       compression: mode       # id of the secondary parameter that is being benchmarked
     range: default, best_speed, best_compression    
-branch: 1.1.0-beta-2
-packets:
-  token: token      # mandatory
+branch: 1.1.0-beta-2 # branch to benchmark
+packet.net:         # config of packet.net deployment, if not given start local deployment
   facility: ams1    # optional, default: ams1. Packet.net facility to deploy on
   plan: baremetal_0 # optional, default: baremetal_0. Packet.net plan (device type)
   os: ubuntu_16_04  # optional, default: ubuntu_16_04. OS of the packet device
   profile: cpu      # optional, default: None. Type of profiling on zstordb (None is disabled)
   profile_dest: ./profile,  # optional, default ./profile. Destination folder where the profiling will be downloaded.
+  etcd_version: # optional, default 3.2.13
 template:         # config for benchmark client
   zstor_config:   
     namespace: mynamespace # itsyou.online namespace
@@ -134,5 +143,26 @@ Examples of generated figures for report.md:
 ![Fig](assets/fig2.png) 
 ![Fig](assets/fig3.png) 
 
-Example of a time plot 
+Example of a time plot:
+
 ![Fig](assets/fig4.png) 
+
+
+
+## Packet.net deployment
+
+Functions for deployment are included in the package [`zstor_packet_setup`](orchestrator/lib/zstor_packet_setup.py).
+In order to start [`JumpScale`](https://github.com/Jumpscale) package has to be installed with this [installation guide](https://github.com/Jumpscale/bash).
+
+To get a client for `packet.net` using [`JumpScale`](https://github.com/Jumpscale) primitives, we need to add an authentification token and a project name to the [`Config manager`]. There are two ways to open the form and add this information:
+
+  1. Run 
+  ``` bash
+  js9_config configure -l j.clients.openvcloud -i test -s /root/.ssh/id_rsa
+  ```
+  2. Start `js9` and then call function to get the client \
+  ``` bash 
+  j.clients.packetnet.get()
+  ```
+
+Now the deployment using [`zstor_local_setup`](orchestrator/lib/zstor_packet_setup.py) can be performed.

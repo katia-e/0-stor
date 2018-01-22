@@ -6,6 +6,7 @@ import os
 from re import split
 from copy import deepcopy
 from subprocess import check_output
+from threading import Thread
 import yaml
 from lib.zstor_local_setup import SetupZstor
 from lib.zstor_packet_setup import SetupZstorPacket
@@ -31,6 +32,13 @@ PROFILES = {'cpu', 'mem', 'trace', 'block'}
 
 LOCAL_DEPLOYMENT = 'local'
 PACKETS_DEPLOYMENT = 'packet.net'
+DEFAULT_BRANCH = '1.1.0-beta-2'
+DEFAULT_PACKETS_CONFIG = {  'facility': 'ams1',
+                            'plan': 'baremetal_0',
+                            'etcd_version': '3.2.13',
+                            'os': 'ubuntu_16_04',
+                            'profile': None,            
+                            'profile_dest': './zstordb_profile'}
 
 class Config:
     """
@@ -73,17 +81,24 @@ class Config:
         self.count_profile = 0
         
         # extract branch
-        self.branch = config.get('branch', '1.1.0-beta-2')
+        self.branch = config.get('branch', DEFAULT_BRANCH)
 
         # check packet.net config, if not given set up local deployment
-        self.packets = config.get('packets', None)
+        self.packets = config.get('packet.net', None)
         if self.packets:
-            self.deployment = LOCAL_DEPLOYMENT
-            token = self.packets.get('token', None)
-            self.deploy = SetupZstorPacket(token)
-        else:
             self.deployment = PACKETS_DEPLOYMENT
+            self.deploy = SetupZstorPacket()
+
+            # set default options for packet.net config
+            for key, val in DEFAULT_PACKETS_CONFIG.items():
+                parameter = self.packets.get(key, None)
+                if not parameter or parameter == 'default':
+                    self.packets.update({key: val})
+
+        else:
+            self.deployment = LOCAL_DEPLOYMENT
             self.deploy = SetupZstor()
+
 
     def new_profile_dir(self, path=""):
         """
@@ -181,23 +196,52 @@ class Config:
     def deploy_zstor(self):
         """ Run zstordb and etcd servers """
 
-        self.deploy.run_zstordb(servers=self.data_shards_nr,
-                                        no_auth=self.no_auth,
-                                        jobs=self.zstordb_jobs)
-        self.deploy.run_etcd(servers=self.meta_shards_nr)
-
+        self.update_deployment_config()
         if self.deployment == LOCAL_DEPLOYMENT:
-            # wait for servers to start
+            self.deploy.run_data_shards(servers=self.data_shards_nr,
+                                            no_auth=self.no_auth,
+                                            jobs=self.zstordb_jobs)
+            self.deploy.run_meta_shards(servers=self.meta_shards_nr)            
             self.wait_local_servers_to_start()            
+        if self.deployment == PACKETS_DEPLOYMENT:
+            t_data_shards = Thread(target=self.deploy.run_data_shards,
+                                   kwargs={'servers' : self.data_shards_nr,
+                                            'no_auth' : self.no_auth,
+                                            'jobs' : self.zstordb_jobs,
+                                            'facility' : self.packets['facility'],
+                                            'plan' : self.packets['plan'],
+                                            'os' : self.packets['os'],
+                                            'profile' : self.packets['profile'],
+                                            'profile_dest' : self.packets['profile_dest']})
+            t_data_shards.start()            
 
-        self.zstor_config.update({'datastor':{'shards': self.deploy.zstordb_addresses}})
-        self.metastor.update({'shards': self.deploy.meta_addresses})
+            t_meta_shards = Thread(target=self.deploy.run_meta_shards,
+                                   kwargs={'servers' : self.meta_shards_nr,
+                                            'facility' : self.packets['facility'],
+                                            'plan' :self.packets['plan'],
+                                            'os' : self.packets['os'],
+                                            'etcd_version' : self.packets['etcd_version']})
+            t_meta_shards.start()
+
+            t_benchmark = Thread(target=self.deploy.init_benchmark,
+                                    kwargs={'branch' : self.branch, 
+                                            'facility' : self.packets['facility'],
+                                            'plan' :self.packets['plan'],
+                                            'os' : self.packets['os']})
+            t_benchmark.start()
+            
+            t_data_shards.join()
+            t_meta_shards.join()
+            t_benchmark.join()
+                                                
+        self.zstor_config.update({'datastor':{'shards': self.deploy.data_shards}})
+        self.metastor.update({'shards': self.deploy.meta_shards})
 
 
     def wait_local_servers_to_start(self):
         """ Check whether ztror and etcd servers are listening on the ports """
 
-        addrs = self.deploy.zstordb_addresses + self.deploy.meta_addresses
+        addrs = self.deploy.data_shards + self.deploy.meta_shards
         servers = 0
         timeout = time.time() + 20
         while servers < len(addrs):
@@ -212,6 +256,17 @@ class Config:
                     servers += 1
                 if time.time() > timeout:
                     raise TimeoutError("couldn't run all required servers. Check that ports are free")
+
+    def run_benchmark(self, config='config.yaml', out='result.yaml', profile_dest='./profile'):
+        """ Runs benchmarking """
+
+        self.deploy.run_benchmark(config=config,
+                                    out=out,
+                                    profile=self.profile,
+                                    profile_dest=self.new_profile_dir(profile_dest))
+
+    def stop_zstor(self):
+        self.deploy.stop()
 
 class Benchmark():
     """ Benchmark class is used defines and validates benchmark parameter """
