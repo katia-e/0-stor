@@ -25,7 +25,7 @@ PARAMETERS = {'block_size',
               'parity_shards',
               'meta_shards_nr',
               'zstordb_jobs'}
-PARAMETERS_DICT = {'encryption': 'type',
+PARAMETERS_DICT = {'encryption': {'type', 'private_key'},
                    'compression': {'type', 'mode'}}
 
 PROFILES = {'cpu', 'mem', 'trace', 'block'}

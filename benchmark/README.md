@@ -104,6 +104,9 @@ template:         # config for benchmark client
       distribution:
         data_shards: 2
         parity_shards: 1
+    encryption:
+      type: aes # aes is the default and only standard option
+      private_key: ab345678901234567890123456789012            
     metastor:
       meta_shards_nr: 2
   bench_config:
