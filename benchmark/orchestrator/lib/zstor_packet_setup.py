@@ -2,13 +2,14 @@ from js9 import j
 import packet, sys, time
 from lib.zstor_local_setup import is_profile_flag
 from threading import Thread, Lock
+from re import split
 
 # temp dir on packet device
 _TMP_DIR = '/tmp'
 _PROF_DIR = _TMP_DIR + "/zstorprof"
 _ZSTORBENCH_HOSTNAME = "zstorbench0"
 _ZSTORBENCH_CONF = _TMP_DIR + "/zstorbenchconf/config.yaml"
-_ZSTORBENCH_OUT = _TMP_DIR  + "/zstorbenchconf/benchmark_result.yaml"
+_ZSTORBENCH_OUT = _TMP_DIR  + "/zstorbenchconf"
 _DATA_DIR = _TMP_DIR + "/data"
 _META_DIR = _TMP_DIR + "/meta"
 _ETCD_DIR = _TMP_DIR + "/etcd"
@@ -24,7 +25,7 @@ class SetupZstorPacket:
         zstorbench0
     """
     def __init__(self):
-        #import ipdb; ipdb.set_trace()
+
         self.p_client = j.clients.packetnet.get()
 
         self._meta_devices = {}
@@ -214,16 +215,24 @@ class SetupZstorPacket:
         prefab.core.upload(config, _ZSTORBENCH_CONF)
 
         # run benchmark
-        cmd = "zstorbench --conf %s --out-benchmark %s" % (_ZSTORBENCH_CONF, _TMP_DIR+out)
+        out_name = split('/', out)[-1]
+        out_path_local = split('/', out)[:-1]
+        if not out_path_local:
+            out_path_local = '.'
+        full_path_out = '%s/%s'%(_ZSTORBENCH_OUT, out_name)
+
+        cmd = "zstorbench --conf %s --out-benchmark %s" % (_ZSTORBENCH_CONF, full_path_out)
         if profile != None:
             cmd += " --profile-mode %s --out-profile %s" % (profile, _PROF_DIR)
 
         prefab.core.execute_bash(cmd)
 
         # download results and profiling if required
-        j.tools.prefab.local.core.dir_ensure(".")
+        j.tools.prefab.local.core.dir_ensure(_ZSTORBENCH_OUT)
+        if not j.tools.prefab.local.core.file_exists(full_path_out):
+            raise RuntimeError('%s is not found'%full_path_out)
 
-        prefab.core.download(_ZSTORBENCH_OUT, ".")
+        prefab.core.download(full_path_out, out_path_local)
         if profile != None:
             j.tools.prefab.local.core.dir_ensure(profile_dest)
             prefab.core.download(_PROF_DIR, profile_dest)
