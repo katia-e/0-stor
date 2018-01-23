@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 """
     Orchestrator controls the running of benchmarking process,
     aggregating results and producing report.
